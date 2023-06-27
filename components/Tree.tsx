@@ -1,19 +1,24 @@
 import React from 'react';
 
-import {useWindowDimensions} from 'react-native';
-
 import {Group, Canvas, Path, Skia} from '@shopify/react-native-skia';
 import Node from './Node';
-
-const Tree = () => {
-  const width = useWindowDimensions().width;
-  const height = useWindowDimensions().height;
-
-  const globalRadius = width * 0.08;
+interface TreeProps {
+  width: number;
+  height: number;
+}
+const Tree = (props: TreeProps) => {
+  const globalRadius = props.width * 0.08;
   //TO BE REFACTORED: PATHING
   const path = Skia.Path.Make();
+  const isNodeOnScreen = (x: number, y: number, r: number) => {
+    if (!(x + r < 0 && y + r < 0)) return true;
+    else if (!(x + r > props.width && y + r > props.width)) return true;
+    else return false;
+  };
   path.moveTo(globalRadius, globalRadius);
   path.lineTo(globalRadius, globalRadius + 200);
+  const testX = -globalRadius;
+  const testY = 0;
   return (
     <Canvas style={{flex: 1}}>
       <Group blendMode="src">
@@ -23,15 +28,14 @@ const Tree = () => {
             draw lines from top most node to all of the children nodes
             repeat for all nodes until no more children
         */}
-        <Node
-          position={[globalRadius, globalRadius]}
-          radius={globalRadius}
-          src=""
-        />
+        {isNodeOnScreen(testX, testY, globalRadius) ? (
+          <Node position={[testX, testY]} radius={globalRadius} src="" />
+        ) : null}
+
         <Path
           path={path}
           color="black"
-          strokeWidth={width * 0.016}
+          strokeWidth={props.width * 0.016}
           style="stroke"
         />
         <Node
