@@ -6,6 +6,7 @@ interface Node {
   position: [number, number];
   radius: number;
   src: string;
+  children: Node[];
 }
 const Node = (props: Node) => {
   const [x, y] = props.position;

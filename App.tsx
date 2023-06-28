@@ -10,7 +10,7 @@ function App(): JSX.Element {
   const height = useWindowDimensions().height;
   return (
     <View style={{height: height}}>
-      <Tree height={height} width={width} />
+      <Tree screenHeight={height} screenWidth={width} />
     </View>
   );
 }
