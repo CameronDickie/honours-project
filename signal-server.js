@@ -21,27 +21,41 @@ io.on('connection', socket => {
         If a peer is initiator, he will create a new room
         otherwise if peer is receiver he will join the room
     */
-  socket.on('join-family', famID => {
+  socket.on('joinFamily', (famID, cb) => {
+    console.log('joinFamily was run');
     if (families[famID]) {
       // Receiving peer joins the room
       families[famID].push(socket.id);
+      console.log('family joined')
+      cb(true)
     } else {
-      // Initiating peer create a new room
-      families[famID] = [socket.id];
+      // Joining a family that doesn't exist should not work. return a failure
+      cb(false)
     }
+    
 
     /*
             If both initiating and receiving peer joins the room,
             we will get the other user details.
             For initiating peer it would be receiving peer and vice versa.
         */
-    const otherUser = rooms[roomID].find(id => id !== socket.id);
-    if (otherUser) {
-      socket.emit('other user', otherUser);
-      socket.to(otherUser).emit('user joined', socket.id);
-    }
+    // const otherUser = rooms[roomID].find(id => id !== socket.id);
+    // if (otherUser) {
+    //   socket.emit('other user', otherUser);
+    //   socket.to(otherUser).emit('user joined', socket.id);
+    // }
   });
 
+  socket.on('createFamily', (famID, cb) => {
+    console.log('createFamily was run');
+    if(families[famID]) {
+      //this family has already been created, as such this route should not work
+      cb(false);
+    } else {
+      families[famID] = [socket.id];
+      cb(true);
+    }
+  })
   /*
         The initiating peer offers a connection
     */

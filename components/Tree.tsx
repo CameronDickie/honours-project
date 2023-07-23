@@ -66,12 +66,12 @@ const renderNodes = (node: Node) => {
   return (
     <React.Fragment>
       <Circle cx={node.position[0]} cy={node.position[1]} r={node.radius} />
-      {node.children.map(child => {
+      {node.children.map((child, keyIndex) => {
         const path = Skia.Path.Make();
         path.moveTo(node.position[0], node.position[1]);
         path.lineTo(child.position[0], child.position[1]);
         return (
-          <React.Fragment>
+          <React.Fragment key={keyIndex}>
             <Path path={path} color="black" style="stroke" strokeWidth={5} />
             {renderNodes(child)}
           </React.Fragment>
