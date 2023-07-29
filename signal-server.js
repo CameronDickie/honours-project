@@ -15,65 +15,41 @@ app.get('/', (req, res) => {
 
 const server = http.createServer(app);
 const io = socket(server);
-
 io.on('connection', socket => {
   /*
-        If a peer is initiator, he will create a new room
-        otherwise if peer is receiver he will join the room
-    */
-  socket.on('joinFamily', (famID, cb) => {
+    If a peer is an initiator, he will create a new room;
+    otherwise, if the peer is a receiver, he will join the room.
+  */
+  socket.on('joinFamily', (userData, cb) => {
     console.log('joinFamily was run');
-    if (families[famID]) {
+    const {firstName, lastName, password, email, familyID} = userData;
+    userData['socket'] = socket.id;
+    if (families[familyID]) {
       // Receiving peer joins the room
-      families[famID].push(socket.id);
+      families[familyID].push(userData);
       console.log('family joined');
       cb(true);
     } else {
-      // Joining a family that doesn't exist should not work. return a failure
+      // Joining a family that doesn't exist should not work; return a failure
       console.log(
         socket.id + " just attempted to join a family that doesn't exist",
       );
       cb(false);
     }
-
-    /*
-            If both initiating and receiving peer joins the room,
-            we will get the other user details.
-            For initiating peer it would be receiving peer and vice versa.
-        */
-    // const otherUser = rooms[roomID].find(id => id !== socket.id);
-    // if (otherUser) {
-    //   socket.emit('other user', otherUser);
-    //   socket.to(otherUser).emit('user joined', socket.id);
-    // }
   });
 
-  socket.on('createFamily', (famID, cb) => {
+  socket.on('createFamily', (userData, cb) => {
     console.log('createFamily was run');
-    if (families[famID]) {
-      //this family has already been created, as such this route should not work
+    const {firstName, lastName, password, email, familyID} = userData;
+    userData['socket'] = socket.id;
+    console.log(JSON.stringify(userData));
+    if (families[familyID]) {
+      // This family has already been created; this route should not work
       cb(false);
     } else {
-      families[famID] = [socket.id];
+      families[familyID] = [userData];
       cb(true);
     }
-  });
-  /*
-        The initiating peer offers a connection
-    */
-  socket.on('offer', payload => {
-    io.to(payload.target).emit('offer', payload);
-  });
-
-  /*
-        The receiving peer answers (accepts) the offer
-    */
-  socket.on('answer', payload => {
-    io.to(payload.target).emit('answer', payload);
-  });
-
-  socket.on('ice-candidate', incoming => {
-    io.to(incoming.target).emit('ice-candidate', incoming.candidate);
   });
 });
 
