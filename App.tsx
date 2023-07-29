@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Button, TextInput, StyleSheet } from 'react-native';
-import { useWindowDimensions } from 'react-native';
+import React, {useState, useEffect} from 'react';
+import {View, Button, TextInput, StyleSheet, Alert} from 'react-native';
+import {useWindowDimensions} from 'react-native';
 import Tree from './components/Tree';
-import { Socket } from 'socket.io-client';
+import {Socket} from 'socket.io-client';
 import io from 'socket.io-client';
 
 interface ServerToClientEvents {
@@ -31,10 +31,13 @@ function App(): JSX.Element {
 
   const [isFamilyAssociated, setIsFamilyAssociated] = useState(false);
   const [textFieldValue, setTextFieldValue] = useState('');
-  const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
+  const [socket, setSocket] = useState<Socket<
+    ServerToClientEvents,
+    ClientToServerEvents
+  > | null>(null);
 
   useEffect(() => {
-    const socketIo = io('http://localhost:9000');
+    const socketIo = io('http://192.168.122.1:9000');
 
     setSocket(socketIo);
 
@@ -45,62 +48,63 @@ function App(): JSX.Element {
 
   const handleSubmitJoin = () => {
     if (socket) {
-      socket.emit('joinFamily', textFieldValue, (response) => {
+      console.log(socket.connected);
+      socket.emit('joinFamily', textFieldValue, response => {
         console.log(response);
-        if(response === true) {
-          console.log('found a family to join and joined the family')
-          setIsFamilyAssociated(true)
+        if (response === true) {
+          console.log('found a family to join and joined the family');
+          setIsFamilyAssociated(true);
         } else if (response === false) {
-          console.log('failed to join a family')
+          console.log('failed to join a family');
         } else {
           console.log('broken');
         }
       });
     }
-  }
+  };
 
   const handleCreateFamily = () => {
     if (socket) {
-      socket.emit('createFamily', textFieldValue, (response) => {
-        console.log(response)
-        if(response === true) {
+      socket.emit('createFamily', textFieldValue, response => {
+        console.log(response);
+        if (response === true) {
           console.log('family has been created');
           setIsFamilyAssociated(true);
-        } else if(response === false) {
-          console.log('failed to create family. likely due to this familyID already existing');
+        } else if (response === false) {
+          console.log(
+            'failed to create family. likely due to this familyID already existing',
+          );
         } else {
           console.log('broken');
         }
-         
-      })
+      });
     }
-  }
+  };
 
   return (
     <View style={{height: height}}>
-      {
-        isFamilyAssociated ? (
-          <Tree screenHeight={height} screenWidth={width} />
-        ) : (
-          <View style={styles.container}>
-            <TextInput 
-              style={styles.input} 
-              value={textFieldValue} 
-              onChangeText={text => setTextFieldValue(text)} 
-              placeholder="Enter family ID"
-              onSubmitEditing={handleSubmitJoin}
-            />
-            <Button 
-              title="Join Family" 
-              onPress={() => handleSubmitJoin()} 
-            />
-            <Button 
-              title="Create Family" 
-              onPress={() => handleCreateFamily()} 
-            />
-          </View>
-        )
-      }
+      {isFamilyAssociated ? (
+        <Tree screenHeight={height} screenWidth={width} />
+      ) : (
+        <View style={styles.container}>
+          <TextInput
+            editable
+            style={styles.input}
+            value={textFieldValue}
+            onChangeText={text => setTextFieldValue(text)}
+            placeholder="Enter family ID"
+            onSubmitEditing={() => handleSubmitJoin()}
+          />
+          {/* handleSubmitJoin() */}
+          <Button
+            title="Join Family"
+            onPress={() => {
+              handleSubmitJoin();
+            }}
+          />
+          <Button title="Create Family" onPress={() => handleCreateFamily()} />
+        </View>
+      )}
     </View>
   );
 }
@@ -112,10 +116,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F5FCFF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.8,
-    shadowRadius: 2,  
-    elevation: 5
+    shadowRadius: 2,
+    elevation: 5,
   },
   input: {
     width: '80%',

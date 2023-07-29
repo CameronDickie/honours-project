@@ -26,13 +26,15 @@ io.on('connection', socket => {
     if (families[famID]) {
       // Receiving peer joins the room
       families[famID].push(socket.id);
-      console.log('family joined')
-      cb(true)
+      console.log('family joined');
+      cb(true);
     } else {
       // Joining a family that doesn't exist should not work. return a failure
-      cb(false)
+      console.log(
+        socket.id + " just attempted to join a family that doesn't exist",
+      );
+      cb(false);
     }
-    
 
     /*
             If both initiating and receiving peer joins the room,
@@ -48,14 +50,14 @@ io.on('connection', socket => {
 
   socket.on('createFamily', (famID, cb) => {
     console.log('createFamily was run');
-    if(families[famID]) {
+    if (families[famID]) {
       //this family has already been created, as such this route should not work
       cb(false);
     } else {
       families[famID] = [socket.id];
       cb(true);
     }
-  })
+  });
   /*
         The initiating peer offers a connection
     */
