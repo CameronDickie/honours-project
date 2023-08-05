@@ -6,6 +6,11 @@ import {Socket} from 'socket.io-client';
 import io from 'socket.io-client';
 import {SignIn} from './views/SignIn';
 import {FamilyView} from './views/FamilyView';
+import {
+  FamilyDataProvider,
+  FamilyData,
+  useFamilyData,
+} from './components/FamilyDataContext';
 
 interface ServerToClientEvents {
   noArg: () => void;
@@ -28,19 +33,20 @@ interface ClientToServerEvents {
 interface InterServerEvents {
   ping: () => void;
 }
-
-interface UserData {
+interface Person {
   firstName: string;
   lastName: string;
+}
+
+interface UserData {
+  person: Person;
   password: string;
   email: string;
   familyID: string;
 }
 
-function App(): JSX.Element {
-  const width = useWindowDimensions().width;
-  const height = useWindowDimensions().height;
-
+const SocketAndRoutes = (): JSX.Element => {
+  const {setFamilyData} = useFamilyData();
   const [isFamilyAssociated, setIsFamilyAssociated] = useState(false);
   const [socket, setSocket] = useState<Socket<
     ServerToClientEvents,
@@ -56,10 +62,17 @@ function App(): JSX.Element {
 
     setSocket(socketIo);
 
+    socketIo.on('handFamilyData', (data: FamilyData) => {
+      setFamilyData(data);
+    });
+
     return () => {
       socketIo.disconnect();
     };
   }, []);
+
+  const width = useWindowDimensions().width;
+  const height = useWindowDimensions().height;
 
   return (
     <View style={{height: height}}>
@@ -69,6 +82,14 @@ function App(): JSX.Element {
         <SignIn socket={socket} setIsFamilyAssociated={setIsFamilyAssociated} />
       )}
     </View>
+  );
+};
+
+function App(): JSX.Element {
+  return (
+    <FamilyDataProvider>
+      <SocketAndRoutes />
+    </FamilyDataProvider>
   );
 }
 
