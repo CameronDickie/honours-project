@@ -1,6 +1,7 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 
 import {Group, Canvas, Path, Skia, Circle} from '@shopify/react-native-skia';
+import {useFamilyData, FamilyMember} from './FamilyDataContext'; // Assuming it's in the same directory
 // import Node from './Node';
 interface TreeProps {
   screenWidth: number;
@@ -81,90 +82,39 @@ const renderNodes = (node: Node) => {
   );
 };
 const Tree = (props: TreeProps) => {
-  const isNodeOnScreen = (x: number, y: number, r: number) => {
-    if (!(x + r < 0 && y + r < 0)) return true;
-    else if (!(x + r > props.screenWidth && y + r > props.screenWidth))
-      return true;
-    else return false;
-  };
-  const globalRadius = props.screenWidth * 0.08;
-  //TO BE REFACTORED: PATHING
-  // const path = Skia.Path.Make();
+  const {familyData} = useFamilyData();
 
-  // path.moveTo(globalRadius, globalRadius);
-  // path.lineTo(globalRadius, globalRadius + 200);
-  const testX = globalRadius;
-  const testY = globalRadius;
-
-  const heightSpacing = 100;
-  const widthSpacing = 100;
-
-  const exampleTree: Node = {
-    id: 'root',
-    position: [props.screenWidth / 2, globalRadius],
-    radius: globalRadius,
-    src: '',
-    children: [
-      {
-        id: 'child1',
-        position: [-1, -1],
-        radius: globalRadius,
-        src: '',
-        children: [
-          {
-            id: 'child5',
-            position: [-1, -1],
-            radius: globalRadius,
-            src: '',
-            children: [],
-          },
-          {
-            id: 'child6',
-            position: [-1, -1],
-            radius: globalRadius,
-            src: '',
-            children: [],
-          },
-        ],
-      },
-      {
-        id: 'child2',
-        position: [-1, -1],
-        radius: globalRadius,
-        src: '',
-        children: [
-          {
-            id: 'child7',
-            position: [-1, -1],
-            radius: globalRadius,
-            src: '',
-            children: [],
-          },
-          {
-            id: 'child8',
-            position: [-1, -1],
-            radius: globalRadius,
-            src: '',
-            children: [],
-          },
-        ],
-      },
-    ],
+  // Convert FamilyData to Node structure.
+  const familyToNodeTree = (familyMember: FamilyMember): Node => {
+    return {
+      id: familyMember.id,
+      position: [-1, -1], // default position; will be computed later
+      radius: props.screenWidth * 0.08,
+      src: '', // Assuming you don't have this information in FamilyMember
+      children: familyMember.relationships.children
+        .map(childId => {
+          const childMember = familyData.members.find(
+            member => member.id === childId,
+          );
+          return childMember ? familyToNodeTree(childMember) : null;
+        })
+        .filter(node => node) as Node[], // Filters out any null values
+    };
   };
 
-  positionNodes(exampleTree, widthSpacing, heightSpacing);
+  const rootNode = useMemo(() => {
+    // Assuming the first family member in your list is the root member.
+    // You might need to adjust this based on your data organization.
+    return familyToNodeTree(familyData.members[0]);
+  }, [familyData]);
+
+  positionNodes(rootNode, 100, 100); // Example spacings
+
   return (
     <Canvas style={{flex: 1}}>
-      <Group blendMode="src">
-        {/*
-            render top most node
-            then render all children of that node
-            draw lines from top most node to all of the children nodes
-            repeat for all nodes until no more children
-        */}
-        {renderNodes(exampleTree)}
-      </Group>
+      <Group blendMode="src">{renderNodes(rootNode)}</Group>
     </Canvas>
   );
 };
+
 export default Tree;

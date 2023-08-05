@@ -1,14 +1,26 @@
 // FamilyDataContext.tsx
 import React, {createContext, useContext, useState} from 'react';
 
-interface Person {
-  firstName: string;
-  lastName: string;
+export interface Relationship {
+  id: string;
+  startDate: string;
+  endDate: string | null;
+}
+
+export interface FamilyMember {
+  id: string;
+  name: string;
+  birthdate: string;
+  deathdate: string | null;
+  relationships: {
+    partner: Relationship[];
+    children: string[];
+    parents: string[];
+  };
 }
 
 export interface FamilyData {
-  // Define the shape of the data you expect here. I'll use a simple example.
-  members: Array<Person>;
+  members: Array<FamilyMember>;
   // ... any other fields
 }
 
