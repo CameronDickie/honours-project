@@ -16,10 +16,11 @@ interface ServerToClientEvents {
   noArg: () => void;
   basicEmit: (a: number, b: string, c: Buffer) => void;
   withAck: (d: string, callback: (e: number) => void) => void;
+  memberStatus: (isAssociated: boolean) => void;
+  initialData: (familyData: FamilyData) => void;
 }
 
 interface ClientToServerEvents {
-  hello: () => void;
   joinFamily: (
     dataToSend: UserData,
     callback: (response: boolean) => void,
@@ -28,6 +29,7 @@ interface ClientToServerEvents {
     dataToSend: UserData,
     callback: (response: boolean) => void,
   ) => void;
+  initialDataRequest: () => void
 }
 
 interface InterServerEvents {
@@ -48,6 +50,7 @@ interface UserData {
 const SocketAndRoutes = (): JSX.Element => {
   const {setFamilyData} = useFamilyData();
   const [isFamilyAssociated, setIsFamilyAssociated] = useState(false);
+  const [memberId, setMemberId] = useState(0)
   const [socket, setSocket] = useState<Socket<
     ServerToClientEvents,
     ClientToServerEvents
@@ -62,9 +65,40 @@ const SocketAndRoutes = (): JSX.Element => {
 
     setSocket(socketIo);
 
+    // Make a GET request to 'getMemId'
+    fetch(`${serverURL}/getMemId`)
+      .then(response => response.json()) // assuming server responds with json
+      .then(data => {
+        const memId = data.memId;  // assuming the server sends the ID as {"memId": "some-id"}
+        setMemberId(memId);
+        socketIo.emit('handleConnection', memId);
+      })
+      .catch(error => {
+        console.error("There was an error fetching the memId:", error);
+      });
+
     socketIo.on('handFamilyData', (data: FamilyData) => {
       setFamilyData(data);
     });
+
+    // Listen to the 'memberStatus' event and set 'isFamilyAssociated'
+    socketIo.on('memberStatus', (isAssociated: boolean) => {
+      //request the data for the family, if the family is associated
+      if (isAssociated) {
+        socketIo.emit('initialDataRequest', memberId);
+      } else {
+        //ensure that the user has the signup view
+        setIsFamilyAssociated(false);
+      }
+    });
+
+    socketIo.on('initialData', (data: FamilyData) => {
+      if (!data) return;
+      setFamilyData(data);
+      //ensure that the user has the familyView
+      setIsFamilyAssociated(true);
+    });
+
 
     return () => {
       socketIo.disconnect();

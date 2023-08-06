@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
-import {View, Button, TextInput, StyleSheet, Text} from 'react-native';
+import {View, Button, TextInput, StyleSheet, Text, Platform} from 'react-native';
+import { useFamilyData } from "../components/FamilyDataContext"
 import {Socket} from 'socket.io-client';
 
 interface SignInProps {
@@ -11,6 +12,8 @@ export const SignIn: React.FC<SignInProps> = ({
   socket,
   setIsFamilyAssociated,
 }) => {
+
+  const { setFamilyData } = useFamilyData();
   //STATE STUFF
   const [familyID, setFamilyID] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -24,7 +27,12 @@ export const SignIn: React.FC<SignInProps> = ({
   const [isEmailValid, setIsEmailValid] = useState(true);
   const [isFamilyIDValid, setIsFamilyIDValid] = useState(true);
 
-  const handleSubmitJoin = () => {
+  const handleFamilyAction = (actionType: 'join' | 'create') => {
+    const serverURL =
+      Platform.OS === 'android'
+        ? 'http://192.168.122.1:9000'
+        : 'http://localhost:9000';
+
     // Validation checks
     const isAllValid =
       firstName.trim() !== '' &&
@@ -33,7 +41,7 @@ export const SignIn: React.FC<SignInProps> = ({
       email.trim() !== '' &&
       familyID.trim() !== '';
 
-    if (socket && isAllValid) {
+    if (isAllValid) {
       const dataToSend = {
         firstName,
         lastName,
@@ -42,56 +50,30 @@ export const SignIn: React.FC<SignInProps> = ({
         familyID: familyID,
       };
 
-      socket.emit('joinFamily', dataToSend, (response: boolean) => {
-        if (response === true) {
-          console.log('found a family to join and joined the family');
-          setIsFamilyAssociated(true);
-        } else if (response === false) {
-          console.log('failed to join a family');
-        } else {
-          console.log('broken');
-        }
-      });
-    } else {
-      // Show error messages for each invalid field
-      setIsFirstNameValid(firstName.trim() !== '');
-      setIsLastNameValid(lastName.trim() !== '');
-      setIsPasswordValid(password.trim() !== '');
-      setIsEmailValid(email.trim() !== '');
-      setIsFamilyIDValid(familyID.trim() !== '');
-    }
-  };
-
-  const handleCreateFamily = () => {
-    // Validation checks
-    const isAllValid =
-      firstName.trim() !== '' &&
-      lastName.trim() !== '' &&
-      password.trim() !== '' &&
-      email.trim() !== '' &&
-      familyID.trim() !== '';
-
-    if (socket && isAllValid) {
-      const dataToSend = {
-        firstName,
-        lastName,
-        password,
-        email,
-        familyID: familyID,
-      };
-
-      socket.emit('createFamily', dataToSend, (response: boolean) => {
-        if (response === true) {
-          console.log('family has been created');
-          setIsFamilyAssociated(true);
-        } else if (response === false) {
-          console.log(
-            'failed to create family. likely due to this familyID already existing',
-          );
-        } else {
-          console.log('broken');
-        }
-      });
+      // Making an API call
+      fetch(`${serverURL}/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...dataToSend,
+          actionType,
+        }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            setIsFamilyAssociated(true);
+            setFamilyData(data.updatedData);
+            console.log('Action successful:', actionType);
+          } else {
+            console.log('Action failed:', data.message);
+          }
+        })
+        .catch((error) => {
+          console.error('API call failed:', error);
+        });
     } else {
       // Show error messages for each invalid field
       setIsFirstNameValid(firstName.trim() !== '');
@@ -174,10 +156,10 @@ export const SignIn: React.FC<SignInProps> = ({
       <Button
         title="Join Family"
         onPress={() => {
-          handleSubmitJoin();
+          handleFamilyAction('join');
         }}
       />
-      <Button title="Create Family" onPress={() => handleCreateFamily()} />
+      <Button title="Create Family" onPress={() => handleFamilyAction('create')} />
     </View>
   );
 };
