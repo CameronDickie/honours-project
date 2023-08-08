@@ -1,6 +1,13 @@
 import React, {useState} from 'react';
-import {View, Button, TextInput, StyleSheet, Text, Platform} from 'react-native';
-import { useFamilyData } from "../components/FamilyDataContext"
+import {
+  View,
+  Button,
+  TextInput,
+  StyleSheet,
+  Text,
+  Platform,
+} from 'react-native';
+import {useFamilyData} from '../components/FamilyDataContext';
 import {Socket} from 'socket.io-client';
 
 interface SignInProps {
@@ -12,8 +19,7 @@ export const SignIn: React.FC<SignInProps> = ({
   socket,
   setIsFamilyAssociated,
 }) => {
-
-  const { setFamilyData } = useFamilyData();
+  const {setFamilyData} = useFamilyData();
   //STATE STUFF
   const [familyID, setFamilyID] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -61,17 +67,17 @@ export const SignIn: React.FC<SignInProps> = ({
           actionType,
         }),
       })
-        .then((response) => response.json())
-        .then((data) => {
+        .then(response => response.json())
+        .then(data => {
           if (data.success) {
+            setFamilyData(prevData => ({...prevData, rootMember: data.data}));
             setIsFamilyAssociated(true);
-            setFamilyData(data.updatedData);
             console.log('Action successful:', actionType);
           } else {
             console.log('Action failed:', data.message);
           }
         })
-        .catch((error) => {
+        .catch(error => {
           console.error('API call failed:', error);
         });
     } else {
@@ -159,7 +165,10 @@ export const SignIn: React.FC<SignInProps> = ({
           handleFamilyAction('join');
         }}
       />
-      <Button title="Create Family" onPress={() => handleFamilyAction('create')} />
+      <Button
+        title="Create Family"
+        onPress={() => handleFamilyAction('create')}
+      />
     </View>
   );
 };

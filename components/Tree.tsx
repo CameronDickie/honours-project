@@ -81,34 +81,32 @@ const renderNodes = (node: Node) => {
     </React.Fragment>
   );
 };
+
 const Tree = (props: TreeProps) => {
   const {familyData} = useFamilyData();
+  const rootFamilyMember = familyData.rootMember;
 
-  // Convert FamilyData to Node structure.
-  const familyToNodeTree = (familyMember: FamilyMember): Node => {
+  // Convert FamilyMember to Node structure.
+  const familyToNodeTree = (familyMember: FamilyMember | null): Node | null => {
+    if (!familyMember) return null;
     return {
       id: familyMember.id,
-      position: [-1, -1], // default position; will be computed later
+      position: [-1, -1],
       radius: props.screenWidth * 0.08,
       src: '', // Assuming you don't have this information in FamilyMember
       children: familyMember.relationships.children
-        .map(childId => {
-          const childMember = familyData.members.find(
-            member => member.id === childId,
-          );
-          return childMember ? familyToNodeTree(childMember) : null;
-        })
-        .filter(node => node) as Node[], // Filters out any null values
+        .map(child => familyToNodeTree(child))
+        .filter(Boolean) as Node[], // filter out null children
     };
   };
 
   const rootNode = useMemo(() => {
-    // Assuming the first family member in your list is the root member.
-    // You might need to adjust this based on your data organization.
-    return familyToNodeTree(familyData.members[0]);
-  }, [familyData]);
+    return familyToNodeTree(rootFamilyMember);
+  }, [rootFamilyMember]);
 
-  positionNodes(rootNode, 100, 100); // Example spacings
+  if (!rootNode) return null; // Early exit if rootNode is null
+
+  positionNodes(rootNode, 100, 100);
 
   return (
     <Canvas style={{flex: 1}}>

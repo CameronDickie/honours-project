@@ -14,18 +14,18 @@ export interface FamilyMember {
   deathdate: string | null;
   relationships: {
     partner: Relationship[];
-    children: string[];
-    parents: string[];
+    children: FamilyMember[];
+    parents: FamilyMember[];
   };
 }
 
 export interface FamilyData {
-  members: Array<FamilyMember>;
+  rootMember: FamilyMember | null;
   // ... any other fields
 }
 
 const defaultFamilyData: FamilyData = {
-  members: [],
+  rootMember: null,
   // ... any other default values
 };
 

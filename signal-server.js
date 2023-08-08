@@ -109,9 +109,10 @@ class FamilyManager {
       // Logic to place the member in the correct position in an existing family
       // This logic will depend on the details provided in memberData and how your application works.
     }
-
+    console.log(this.families);
+    console.log(this.families[memberData.id]);
     // Return the updated data or just the new member data
-    return this.families;
+    return this.families[memberData.id];
   }
 
   // Function to handle editing a member.
@@ -160,17 +161,15 @@ app.post('/signup', (req, res) => {
     if (familyManager.doesMemberExist(familyId)) {
       // Add new member to the family
       const updatedData = familyManager.addMember(newMember);
-      res.json({status: 'joined', data: updatedData});
+      res.json({success: true, data: updatedData}); // Send the root member
     } else {
       res.status(400).json({error: 'Invalid familyId provided.'});
     }
   } else {
     const newMember = familyManager.createFamilyMemberFromSignup(data);
-    // Creating a new family
-    const updatedData = familyManager.addMember(newMember);
-    // Ideally, you might want some logic inside the `addMember` function
-    // to handle root family members differently (i.e., those who are starting a new family).
-    res.json({status: 'created', data: updatedData, message: 'created', success: true});
+    // Add new member as root if a new family is being created
+    const rootMember = familyManager.addMember(newMember);
+    res.json({success: true, data: rootMember});
   }
 });
 
