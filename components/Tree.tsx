@@ -16,51 +16,33 @@ interface Node {
   children: Node[];
 }
 
-//THIS NEEDS FURTHER TESTING FOR POSITIONING OF NODES AND SUBSEQUENT NODES
 function positionNodes(
   root: Node,
   widthSpacing: number,
   heightSpacing: number,
 ) {
-  //First pass: assign y coordinates and mark levels
-  const levels: Node[][] = [];
-  const dfs = (node: Node, depth: number, initialY: number) => {
-    node.position[1] = depth * heightSpacing + initialY;
+  // Assign y coordinates and center nodes based on their hierarchy
+  const dfs = (node: Node, x: number, depth: number) => {
+    node.position[0] = x;
 
-    if (!levels[depth]) levels[depth] = [];
-    levels[depth].push(node);
-    if (node.children) {
+    // If depth is 0 (root node), don't overwrite its y position
+    if (depth !== 0) {
+      node.position[1] = depth * heightSpacing;
+    }
+
+    const childrenCount = node.children.length;
+
+    if (childrenCount > 0) {
+      const totalWidthForChildren = widthSpacing * (childrenCount - 1);
+      let currentX = x - totalWidthForChildren / 2;
       for (const child of node.children) {
-        dfs(child, depth + 1, initialY);
+        dfs(child, currentX, depth + 1);
+        currentX += widthSpacing;
       }
-      // const childrenWidth = (node.children.length - 1) * widthSpacing;
-
-      // let currentX = node.position[0] - childrenWidth / 2;
-
-      // for (const child of node.children) {
-      //   child.position[0] = currentX;
-      //   currentX += widthSpacing;
-      //   dfs(child, depth + 1, initialY);
-      // }
     }
   };
-  dfs(root, 0, root.position[1]);
 
-  //Second pass: adjust widthSpacing for the next level
-  for (let i = levels.length - 1; i >= 0; i--) {
-    const levelNodes = levels[i];
-    const levelWidth = (levelNodes.length - 1) * widthSpacing;
-    let currentX = root.position[0] - levelWidth / 2;
-    for (const node of levelNodes) {
-      node.position[0] = currentX;
-      currentX += widthSpacing;
-    }
-
-    //adjust widthSpacing for the next level
-    if (i > 0) {
-      widthSpacing = levelWidth / (levels[i - 1].length - 1 || 1);
-    }
-  }
+  dfs(root, root.position[0], 0);
 }
 
 const renderNodes = (node: Node) => {
@@ -99,9 +81,13 @@ const Tree = (props: TreeProps) => {
         .filter(Boolean) as Node[], // filter out null children
     };
   };
-
   const rootNode = useMemo(() => {
-    return familyToNodeTree(rootFamilyMember);
+    const yPadding = 50;
+    const initialNode = familyToNodeTree(rootFamilyMember);
+    if (initialNode) {
+      initialNode.position = [props.screenWidth / 2, yPadding]; // Adjust Y value as needed
+    }
+    return initialNode;
   }, [rootFamilyMember]);
 
   if (!rootNode) return null; // Early exit if rootNode is null
