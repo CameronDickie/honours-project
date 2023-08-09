@@ -11,7 +11,11 @@ import {
   Switch,
 } from 'react-native';
 import Tree from '../components/Tree';
-import {FamilyMember, useFamilyData} from '../components/FamilyDataContext';
+import {
+  FamilyMember,
+  useFamilyData,
+  getIndividuals,
+} from '../components/FamilyDataContext';
 
 interface FamilyViewProps {
   screenHeight: number;
@@ -73,7 +77,7 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
   };
 
   const handleArrowPress = () => {
-    console.log('Arrow button pressed!');
+    console.log(getIndividuals(familyData.rootMember, ['name', 'birthdate']));
   };
 
   return (
@@ -87,6 +91,12 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
           onPress={handlePlusPress}
           activeOpacity={0.6}>
           <Text style={styles.iconText}>+</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={handleArrowPress}
+          activeOpacity={0.6}>
+          <Text style={styles.iconText}>-</Text>
         </TouchableOpacity>
         {/* Other button... */}
       </View>

@@ -46,6 +46,55 @@ interface FamilyDataContextProps {
   setFamilyData: React.Dispatch<React.SetStateAction<FamilyData>>;
 }
 
+//A helper function which creates an object with only the desired attributes for a given FamilyMember
+const extractAttributes = (member: FamilyMember, attributes: string[]): any => {
+  let obj: any = {};
+
+  attributes.forEach(attr => {
+    if (member.hasOwnProperty(attr)) {
+      obj[attr] = (member as any)[attr];
+    }
+  });
+
+  return obj;
+};
+
+// Usage:
+// const attributesList = ["name", "birthdate"];
+// const extractedData = extractAttributesFromTree(familyData.rootMember, attributesList);
+// console.log(extractedData);
+
+/*
+  Starts at the root and collects data based on the provided attributes. 
+  It then recursively does the same for all the children and parents of the current member
+  @returns a list of JSON objects corresponding to a FamilyMember in the Tree
+*/
+const extractAttributesFromTree = (
+  root: FamilyMember | null,
+  attributes: string[],
+): any[] => {
+  if (!root) return [];
+
+  const currentMemberAttributes = extractAttributes(root, attributes);
+  const results: any[] = [currentMemberAttributes];
+
+  root.relationships.children.forEach(child => {
+    results.push(...extractAttributesFromTree(child, attributes));
+  });
+  root.relationships.parents.forEach(parent => {
+    results.push(...extractAttributesFromTree(parent, attributes));
+  });
+
+  return results;
+};
+
+export const getIndividuals = (
+  root: FamilyMember | null,
+  attributes: string[],
+) => {
+  return extractAttributesFromTree(root, attributes);
+};
+
 const FamilyDataContext = createContext<FamilyDataContextProps | undefined>(
   undefined,
 );
