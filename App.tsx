@@ -1,8 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {View, Button, TextInput, StyleSheet, Text} from 'react-native';
 import {useWindowDimensions, Platform} from 'react-native';
-import io from 'socket.io-client';
-import {SignIn} from './views/SignIn';
 import {Authentication} from './views/Authentication';
 import {FamilyView} from './views/FamilyView';
 import {
@@ -48,12 +46,10 @@ interface UserData {
 }
 
 const SocketAndRoutes = (): JSX.Element => {
-  const {socket, isFamilyAssociated} = useSocket(); // Use the socket from the context!
-  const {setFamilyData} = useFamilyData();
+  const {isFamilyAssociated} = useSocket(); // Use the socket from the context!
 
   const width = useWindowDimensions().width;
   const height = useWindowDimensions().height;
-
   return (
     <View style={{height: height}}>
       {isFamilyAssociated ? (

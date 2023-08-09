@@ -44,10 +44,11 @@ export const Authentication: React.FC = () => {
       })
         .then(response => response.json())
         .then(data => {
-          if (data.success) {
-            setFamilyData(prevData => ({...prevData, rootMember: data.data}));
-            setIsFamilyAssociated(true);
-            console.log('Action successful:', view);
+          if (data.success && socket) {
+            // setFamilyData(prevData => ({...prevData, rootMember: data.data}));
+            // setIsFamilyAssociated(true);
+            console.log('Sign up successful, id: ' + data.data);
+            socket.emit('handleConnection', data.data);
           } else {
             console.log('Action failed:', data.error);
           }
@@ -69,10 +70,10 @@ export const Authentication: React.FC = () => {
       })
         .then(response => response.json())
         .then(data => {
-          if (data.success) {
-            setFamilyData(prevData => ({...prevData, rootMember: data.data}));
-            setIsFamilyAssociated(true);
-            console.log('Logged in successfully');
+          if (data.success && socket) {
+            // setFamilyData(prevData => ({...prevData, rootMember: data.data}));
+            // setIsFamilyAssociated(true)
+            socket.emit('handleConnection', data.data);
           } else {
             console.log('Login failed:', data.error);
           }

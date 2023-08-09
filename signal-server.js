@@ -94,14 +94,12 @@ class FamilyManager {
     return false;
   }
 
-  // Fetch the family tree for a particular member.
   getFamilyTreeForMember(memberId) {
     for (let familyRootId in this.families) {
       if (this.memberExistsInTree(memberId, this.families[familyRootId])) {
         return this.families[familyRootId];
       }
     }
-
     return null;
   }
 
@@ -164,13 +162,6 @@ app.get('/', (req, res) => {
   res.send('hello i am a route');
 });
 
-let currentMemId = 0; // Start from 0, but you can start from any other value if desired.
-
-app.get('/getMemId', (req, res) => {
-  currentMemId += 1; // Increment the ID
-  res.json({memId: currentMemId});
-});
-
 app.post('/signup', async (req, res) => {
   const data = req.body;
   const {email} = data;
@@ -191,12 +182,12 @@ app.post('/signup', async (req, res) => {
       data.password,
       SALT_ROUNDS,
     );
-    res.json({success: true, data: existingMember});
+    res.json({success: true, data: existingMember.id});
   } else {
     const newMember = await familyManager.createFamilyMemberFromSignup(data);
     // Add new member as root, implying a new family is being created
     const rootMember = familyManager.addMember(newMember);
-    res.json({success: true, data: rootMember});
+    res.json({success: true, data: rootMember.id});
   }
 });
 
@@ -223,7 +214,7 @@ app.post('/login', async (req, res) => {
 
   if (isPasswordCorrect) {
     // In a real-world scenario, here you would generate a session/token and send it to the client.
-    res.json({success: true, data: existingMember});
+    res.json({success: true, data: existingMember.id});
   } else {
     res.status(400).json({error: 'Invalid password'});
   }
@@ -237,10 +228,16 @@ io.on('connection', socket => {
   socket.on('handleConnection', memberId => {
     const exists = familyManager.doesMemberExist(memberId);
     if (exists) {
-      socket.emit('memberStatus', true);
+      socket.emit('memberStatus', {
+        isAssociated: true,
+        receivedMemId: memberId,
+      });
       // Additional code to send family data or other actions if needed.
     } else {
-      socket.emit('memberStatus', false);
+      socket.emit('memberStatus', {
+        isAssociated: false,
+        receivedMemId: memberId,
+      });
       // Additional code for new members or other actions.
     }
   });

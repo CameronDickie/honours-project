@@ -2,7 +2,7 @@ import React, {createContext, useContext, useEffect, useState} from 'react';
 import io, {Socket} from 'socket.io-client';
 import {Platform} from 'react-native';
 import {ServerToClientEvents, ClientToServerEvents} from '../App'; // Update this import path!
-import {FamilyData, useFamilyData} from './FamilyDataContext';
+import {FamilyData, useFamilyData, FamilyMember} from './FamilyDataContext';
 
 const SERVER_URL =
   Platform.OS === 'android'
@@ -21,6 +21,10 @@ interface SocketProviderProps {
   children: React.ReactNode;
 }
 
+interface MemberStatus {
+  isAssociated: boolean;
+  receivedMemId: number;
+}
 const SocketContext = createContext<SocketContextProps | undefined>(undefined);
 
 export const useSocket = () => {
@@ -43,17 +47,17 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
 
     // After the socket connects, fetch the memId
     socketIo.on('connect', () => {
-      // Make a GET request to 'getMemId'
-      fetch(`${SERVER_URL}/getMemId`)
-        .then(response => response.json())
-        .then(data => {
-          const receivedMemId = data.memId;
-          setMemberId(receivedMemId);
-          socketIo.emit('handleConnection', receivedMemId);
-        })
-        .catch(error => {
-          console.error('There was an error fetching the memId:', error);
-        });
+      // // Make a GET request to 'getMemId'
+      // fetch(`${SERVER_URL}/getMemId`)
+      //   .then(response => response.json())
+      //   .then(data => {
+      //     const receivedMemId = data.memId;
+      //     setMemberId(receivedMemId);
+      //     socketIo.emit('handleConnection', receivedMemId);
+      //   })
+      //   .catch(error => {
+      //     console.error('There was an error fetching the memId:', error);
+      //   });
     });
 
     socketIo.on('handFamilyData', (data: FamilyData) => {
@@ -61,19 +65,21 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
     });
 
     // Listen to the 'memberStatus' event and set 'isFamilyAssociated'
-    socketIo.on('memberStatus', (isAssociated: boolean) => {
+    socketIo.on('memberStatus', (status: MemberStatus) => {
+      const {isAssociated, receivedMemId} = status;
+
       //request the data for the family, if the family is associated
       if (isAssociated) {
-        socketIo.emit('initialDataRequest', memberId);
+        socketIo.emit('initialDataRequest', receivedMemId);
       } else {
         //ensure that the user has the signup view
         setIsFamilyAssociated(false);
       }
     });
 
-    socketIo.on('initialData', (data: FamilyData) => {
+    socketIo.on('initialData', (data: FamilyMember) => {
       if (!data) return;
-      setFamilyData(data);
+      setFamilyData(prevData => ({...prevData, rootMember: data}));
       //ensure that the user has the familyView
       setIsFamilyAssociated(true);
     });
