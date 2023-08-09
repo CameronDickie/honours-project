@@ -9,6 +9,7 @@ import {
   TextInput,
   Button,
   Switch,
+  Platform, ActionSheetIOS
 } from 'react-native';
 import {Picker} from '@react-native-picker/picker';
 import Tree from '../components/Tree';
@@ -104,6 +105,20 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
     console.log(getIndividuals(familyData.rootMember, ['name', 'birthdate']));
   };
 
+  const showActionSheet = (setSelected: (value: string) => void) => {
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options: ['Cancel', ...allUsers],
+        cancelButtonIndex: 0,
+      },
+      (buttonIndex) => {
+        if (buttonIndex !== 0) {
+          setSelected(allUsers[buttonIndex - 1]);
+        }
+      }
+    );
+  };
+
   return (
     <View style={{flex: 1}}>
       <Tree screenHeight={screenHeight} screenWidth={screenWidth} />
@@ -158,30 +173,43 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
               style={styles.input}
             />
 
-            {/* First Dropdown */}
-            <Text style={styles.subtitle}>Select Parents</Text>
-            <Picker
-              selectedValue={selectedUser}
-              style={styles.pickerStyle}
-              onValueChange={itemValue => setSelectedUser(itemValue as string)}>
-              <Picker.Item label="Select User..." value={null} />
-              {allUsers.map((user, index) => (
-                <Picker.Item key={index} label={user} value={user} />
-              ))}
-            </Picker>
-            <Text style={styles.subtitle}>Select Children</Text>
-            {/* Second Dropdown */}
-            <Picker
-              selectedValue={selectedUser2}
-              style={styles.pickerStyle}
-              onValueChange={itemValue =>
-                setSelectedUser2(itemValue as string)
-              }>
-              <Picker.Item label="Select User..." value={null} />
-              {allUsers.map((user, index) => (
-                <Picker.Item key={index} label={user} value={user} />
-              ))}
-            </Picker>
+            {Platform.OS === 'ios' ? (
+              <TouchableOpacity onPress={() => showActionSheet(setSelectedUser)}>
+                <Text style={styles.input}>
+                  {selectedUser || "Select User..."}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <Picker
+                selectedValue={selectedUser}
+                style={styles.pickerStyle}
+                onValueChange={itemValue => setSelectedUser(itemValue as string)}>
+                <Picker.Item label="Select User..." value={null} />
+                {allUsers.map((user, index) => (
+                  <Picker.Item key={index} label={user} value={user} />
+                ))}
+              </Picker>
+            )}
+
+            {Platform.OS === 'ios' ? (
+              <TouchableOpacity onPress={() => showActionSheet(setSelectedUser2)}>
+                <Text style={styles.input}>
+                  {selectedUser2 || "Select User..."}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <Picker
+                selectedValue={selectedUser2}
+                style={styles.pickerStyle}
+                onValueChange={itemValue =>
+                  setSelectedUser2(itemValue as string)
+                }>
+                <Picker.Item label="Select User..." value={null} />
+                {allUsers.map((user, index) => (
+                  <Picker.Item key={index} label={user} value={user} />
+                ))}
+              </Picker>
+            )}
             <View style={styles.inlineContainer}>
               <Switch
                 value={isUser}
