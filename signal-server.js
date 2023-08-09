@@ -2,12 +2,12 @@ const express = require('express');
 const http = require('http');
 const socket = require('socket.io');
 const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt'); // Require bcrypt for hashing
 
 const app = express();
+const SALT_ROUNDS = 10; // Number of salt rounds for bcrypt hashing
 
-// Allow the server to parse JSON requests
 app.use(bodyParser.json());
-const families = {};
 
 class FamilyManager {
   constructor() {
@@ -25,13 +25,15 @@ class FamilyManager {
    * @param {Object} data - The signup data
    * @returns {FamilyMember} - The new family member
    */
-  createFamilyMemberFromSignup(data) {
+  async createFamilyMemberFromSignup(data) {
     const {firstName, lastName, email, password} = data;
     const name = `${firstName} ${lastName}`;
 
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
     const newUser = {
       email,
-      password, // Reminder: Please hash the password before storing it.
+      password: hashedPassword,
       socketConnection: null,
       online: false,
     };
@@ -169,10 +171,9 @@ app.get('/getMemId', (req, res) => {
   res.json({memId: currentMemId});
 });
 
-app.post('/signup', (req, res) => {
+app.post('/signup', async (req, res) => {
   const data = req.body;
   const {email} = data;
-  let familyId = data.familyID;
 
   // Check if email (user) already exists in the family tree
   let existingMember = null;
@@ -186,31 +187,45 @@ app.post('/signup', (req, res) => {
 
   if (existingMember) {
     // If user exists, just update the user details without creating a new member
-    existingMember.user = {
-      email,
-      password: data.password, // Reminder: Please hash the password before storing it.
-      socketConnection: null,
-      online: false,
-    };
+    existingMember.user.password = await bcrypt.hash(
+      data.password,
+      SALT_ROUNDS,
+    );
     res.json({success: true, data: existingMember});
   } else {
-    const newMember = familyManager.createFamilyMemberFromSignup(data);
-    if (familyId) {
-      // Joining an existing family
-      // Check if family with familyId exists
-      if (familyManager.doesMemberExist(familyId)) {
-        // Add new member to the family
-        const updatedData = familyManager.addMember(newMember);
-        res.json({success: true, data: updatedData}); // Send the root member
-      } else {
-        res.status(400).json({error: 'Invalid familyId provided.'});
-      }
-    } else {
-      const newMember = familyManager.createFamilyMemberFromSignup(data);
-      // Add new member as root if a new family is being created
-      const rootMember = familyManager.addMember(newMember);
-      res.json({success: true, data: rootMember});
-    }
+    const newMember = await familyManager.createFamilyMemberFromSignup(data);
+    // Add new member as root, implying a new family is being created
+    const rootMember = familyManager.addMember(newMember);
+    res.json({success: true, data: rootMember});
+  }
+});
+
+app.post('/login', async (req, res) => {
+  const {email, password} = req.body;
+
+  let existingMember = null;
+  for (let familyRootId in familyManager.families) {
+    existingMember = familyManager.findMemberByEmail(
+      email,
+      familyManager.families[familyRootId],
+    );
+    if (existingMember) break;
+  }
+
+  if (!existingMember || !existingMember.user) {
+    return res.status(400).json({error: 'User does not exist'});
+  }
+
+  const isPasswordCorrect = await bcrypt.compare(
+    password,
+    existingMember.user.password,
+  );
+
+  if (isPasswordCorrect) {
+    // In a real-world scenario, here you would generate a session/token and send it to the client.
+    res.json({success: true, data: existingMember});
+  } else {
+    res.status(400).json({error: 'Invalid password'});
   }
 });
 
@@ -274,4 +289,7 @@ io.on('connection', socket => {
   });
 });
 
-server.listen(9000, () => console.log('Server is up and running on Port 9000'));
+const PORT = process.env.PORT || 9000;
+server.listen(PORT, () =>
+  console.log(`Server is up and running on Port ${PORT}`),
+);

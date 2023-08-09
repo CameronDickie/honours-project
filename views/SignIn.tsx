@@ -20,18 +20,19 @@ export const SignIn: React.FC<SignInProps> = ({
   setIsFamilyAssociated,
 }) => {
   const {setFamilyData} = useFamilyData();
-  //STATE STUFF
-  const [familyID, setFamilyID] = useState('');
+
+  // STATES
+  const [isLoginView, setIsLoginView] = useState(false); // New state for toggling the view
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
 
+  // Validity States
   const [isFirstNameValid, setIsFirstNameValid] = useState(true);
   const [isLastNameValid, setIsLastNameValid] = useState(true);
   const [isPasswordValid, setIsPasswordValid] = useState(true);
   const [isEmailValid, setIsEmailValid] = useState(true);
-  const [isFamilyIDValid, setIsFamilyIDValid] = useState(true);
 
   const handleFamilyAction = (actionType: 'join' | 'create') => {
     const serverURL =
@@ -52,7 +53,6 @@ export const SignIn: React.FC<SignInProps> = ({
         lastName,
         password,
         email,
-        familyID: familyID,
       };
 
       // Making an API call
@@ -143,18 +143,6 @@ export const SignIn: React.FC<SignInProps> = ({
       />
       {!isEmailValid && (
         <Text style={styles.errorText}>Please enter a valid Email Address</Text>
-      )}
-      <TextInput
-        editable
-        style={[styles.input, !isFamilyIDValid && styles.inputError]}
-        value={familyID}
-        onChangeText={text => {
-          setFamilyID(text);
-        }}
-        placeholder="Family ID"
-      />
-      {!isFamilyIDValid && (
-        <Text style={styles.errorText}>Please enter a valid Family ID</Text>
       )}
       <Button
         title="Join Family"
