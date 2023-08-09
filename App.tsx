@@ -1,15 +1,14 @@
 import React, {useState, useEffect} from 'react';
 import {View, Button, TextInput, StyleSheet, Text} from 'react-native';
-import {useWindowDimensions, Platform} from 'react-native';
+import {useWindowDimensions} from 'react-native';
 import {Authentication} from './views/Authentication';
 import {FamilyView} from './views/FamilyView';
-import {
-  FamilyDataProvider,
-  FamilyData,
-  useFamilyData,
-} from './components/FamilyDataContext';
+import {FamilyDataProvider, FamilyData} from './components/FamilyDataContext';
 import {SocketProvider, useSocket} from './components/SocketContext';
 
+/*
+Socket event section should be better defined
+*/
 export interface ServerToClientEvents {
   noArg: () => void;
   basicEmit: (a: number, b: string, c: Buffer) => void;
@@ -30,9 +29,10 @@ export interface ClientToServerEvents {
   initialDataRequest: () => void;
 }
 
-interface InterServerEvents {
-  ping: () => void;
-}
+/*
+interfaces which serve to be templates that can be sent to the server side
+(I think person is not actually being used anywhere now this might be removed) 
+*/
 interface Person {
   firstName: string;
   lastName: string;
@@ -45,8 +45,11 @@ interface UserData {
   familyID: string;
 }
 
-const SocketAndRoutes = (): JSX.Element => {
-  const {isFamilyAssociated} = useSocket(); // Use the socket from the context!
+/*
+A JSX object which serves to provide screen information and control what view the user is seeing
+*/
+const ViewController = (): JSX.Element => {
+  const {isFamilyAssociated} = useSocket();
 
   const width = useWindowDimensions().width;
   const height = useWindowDimensions().height;
@@ -56,7 +59,6 @@ const SocketAndRoutes = (): JSX.Element => {
         <FamilyView screenHeight={height} screenWidth={width} />
       ) : (
         <Authentication />
-        // <SignIn socket={socket} setIsFamilyAssociated={setIsFamilyAssociated} />
       )}
     </View>
   );
@@ -66,7 +68,7 @@ function App(): JSX.Element {
   return (
     <FamilyDataProvider>
       <SocketProvider>
-        <SocketAndRoutes />
+        <ViewController />
       </SocketProvider>
     </FamilyDataProvider>
   );

@@ -45,24 +45,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
     const socketIo = io(SERVER_URL);
     setSocket(socketIo);
 
-    // After the socket connects, fetch the memId
-    socketIo.on('connect', () => {
-      // // Make a GET request to 'getMemId'
-      // fetch(`${SERVER_URL}/getMemId`)
-      //   .then(response => response.json())
-      //   .then(data => {
-      //     const receivedMemId = data.memId;
-      //     setMemberId(receivedMemId);
-      //     socketIo.emit('handleConnection', receivedMemId);
-      //   })
-      //   .catch(error => {
-      //     console.error('There was an error fetching the memId:', error);
-      //   });
-    });
-
-    socketIo.on('handFamilyData', (data: FamilyData) => {
-      setFamilyData(data);
-    });
+    //remnant of previous implementation, however leaving it in in case it is needed in the future
+    socketIo.on('connect', () => {});
 
     // Listen to the 'memberStatus' event and set 'isFamilyAssociated'
     socketIo.on('memberStatus', (status: MemberStatus) => {
@@ -77,6 +61,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
       }
     });
 
+    //this is their first recieving of the data, which should be organized properly and the root member properly assigned
     socketIo.on('initialData', (data: FamilyMember) => {
       if (!data) return;
       setFamilyData(prevData => ({...prevData, rootMember: data}));
@@ -89,6 +74,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
     };
   }, []);
 
+  //do I need to export all of these values? can this be reduced?
   return (
     <SocketContext.Provider
       value={{socket, isFamilyAssociated, memberId, setIsFamilyAssociated}}>
