@@ -10,6 +10,7 @@ import {
   Button,
   Switch,
 } from 'react-native';
+import {Picker} from '@react-native-picker/picker';
 import Tree from '../components/Tree';
 import {
   FamilyMember,
@@ -35,6 +36,29 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
   const [isUser, setIsUser] = useState<boolean>(false); // Toggle this to show/hide user fields
 
   const {familyData, setFamilyData} = useFamilyData(); // Access family data from context
+
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [selectedUser2, setSelectedUser2] = useState<string | null>(null);
+
+  const allUsers: string[] = []; // This will store all the user names for the dropdown
+
+  // This function populates the allUsers array with user names
+  const populateUserNames = (member: FamilyMember | null) => {
+    if (!member) return;
+
+    if (member.user && member.user.email) {
+      allUsers.push(member.name);
+    }
+
+    member.relationships.children.forEach(child => {
+      populateUserNames(child);
+    });
+    member.relationships.parents.forEach(parent => {
+      populateUserNames(parent);
+    });
+  };
+
+  populateUserNames(familyData.rootMember);
 
   const addFamilyMember = () => {
     // Here you would usually interact with your backend or other logic to actually add the member to your data structure
@@ -103,63 +127,100 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
 
       {/* Modal for adding a family member */}
       <Modal animationType="slide" transparent={true} visible={modalVisible}>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.modalContainer}
           activeOpacity={1} // Keep it fully opaque when pressed
           onPress={handleModalClose} // Close the modal when this is pressed
-        >
-          <ScrollView
-            contentContainerStyle={styles.modalView}
-            onStartShouldSetResponder={() => true}>
-            <View style={{width: '100%'}}>
-              <Text style={[styles.modalTitle, styles.centeredText]}>
-                Add a Family Member
-              </Text>
-              <TextInput
-                placeholder="Name"
-                value={memberName}
-                onChangeText={setMemberName}
-                style={styles.input}
-              />
-              <TextInput
-                placeholder="Birthdate (e.g., YYYY-MM-DD)"
-                value={memberBirthdate}
-                onChangeText={setMemberBirthdate}
-                style={styles.input}
-              />
-              <TextInput
-                placeholder="Deathdate (e.g., YYYY-MM-DD)"
-                value={memberDeathdate}
-                onChangeText={setMemberDeathdate}
-                style={styles.input}
-              />
+        > */}
+        <ScrollView
+          contentContainerStyle={styles.modalView}
+          onStartShouldSetResponder={() => true}>
+          <View style={{width: '100%'}}>
+            <Text style={[styles.modalTitle, styles.centeredText]}>
+              Add a Family Member
+            </Text>
+            <TextInput
+              placeholder="Name"
+              value={memberName}
+              onChangeText={setMemberName}
+              style={styles.input}
+            />
+            <TextInput
+              placeholder="Birthdate (e.g., YYYY-MM-DD)"
+              value={memberBirthdate}
+              onChangeText={setMemberBirthdate}
+              style={styles.input}
+            />
+            <TextInput
+              placeholder="Deathdate (e.g., YYYY-MM-DD)"
+              value={memberDeathdate}
+              onChangeText={setMemberDeathdate}
+              style={styles.input}
+            />
+
+            {/* First Dropdown */}
+            <Text style={styles.subtitle}>Select Parents</Text>
+            <Picker
+              selectedValue={selectedUser}
+              style={styles.pickerStyle}
+              onValueChange={itemValue => setSelectedUser(itemValue as string)}>
+              <Picker.Item label="Select User..." value={null} />
+              {allUsers.map((user, index) => (
+                <Picker.Item key={index} label={user} value={user} />
+              ))}
+            </Picker>
+            <Text style={styles.subtitle}>Select Children</Text>
+            {/* Second Dropdown */}
+            <Picker
+              selectedValue={selectedUser2}
+              style={styles.pickerStyle}
+              onValueChange={itemValue =>
+                setSelectedUser2(itemValue as string)
+              }>
+              <Picker.Item label="Select User..." value={null} />
+              {allUsers.map((user, index) => (
+                <Picker.Item key={index} label={user} value={user} />
+              ))}
+            </Picker>
+            <View style={styles.inlineContainer}>
               <Switch
                 value={isUser}
                 onValueChange={setIsUser}
                 style={styles.switch}
               />
-              {isUser && (
-                <>
-                  <TextInput
-                    placeholder="Email"
-                    value={memberEmail}
-                    onChangeText={setMemberEmail}
-                    style={styles.input}
-                  />
-                  <TextInput
-                    placeholder="Password"
-                    value={memberPassword}
-                    onChangeText={setMemberPassword}
-                    secureTextEntry={true}
-                    style={styles.input}
-                  />
-                </>
-              )}
-              <Button title="Add Member" onPress={addFamilyMember} />
-              <Button title="Close" onPress={handleModalClose} />
+              <Text style={styles.subtitle}>Create a new User</Text>
             </View>
-          </ScrollView>
-        </TouchableOpacity>
+
+            {isUser && (
+              <>
+                <TextInput
+                  placeholder="Email"
+                  value={memberEmail}
+                  onChangeText={setMemberEmail}
+                  style={styles.input}
+                />
+                <TextInput
+                  placeholder="Password"
+                  value={memberPassword}
+                  onChangeText={setMemberPassword}
+                  secureTextEntry={true}
+                  style={styles.input}
+                />
+              </>
+            )}
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={addFamilyMember}>
+              <Text style={styles.buttonText}>Add Member</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={handleModalClose}>
+              <Text style={styles.buttonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+        {/* </TouchableOpacity> */}
       </Modal>
     </View>
   );
@@ -193,15 +254,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.1)', // This makes the background slightly dark when the modal is open
   },
   modalView: {
-    width: '80%',
+    width: '100%',
     backgroundColor: 'white',
     padding: 20,
     borderRadius: 10,
-    elevation: 5, // For Android shadow
-    shadowColor: '#000', // For iOS shadow
-    shadowOffset: {width: 0, height: 2}, // For iOS shadow
-    shadowOpacity: 0.25, // For iOS shadow
-    shadowRadius: 4, // For iOS shadow
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    // Removed the marginHorizontal (since it's unnecessary now)
   },
   centeredText: {
     textAlign: 'center',
@@ -219,7 +281,47 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 20,
   },
+  inlineContainer: {
+    flexDirection: 'row', // to layout children in a row
+    alignItems: 'center', // vertically centering children
+    marginBottom: 20, // optional, for some spacing after this container
+  },
+
   switch: {
-    marginVertical: 10,
+    marginRight: 10, // to give some space between the switch and the text
+  },
+
+  pickerStyle: {
+    height: 50,
+    width: '100%',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 5,
+    marginBottom: 20,
+  },
+
+  // New styles for the buttons
+  primaryButton: {
+    backgroundColor: '#3498db',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  secondaryButton: {
+    backgroundColor: '#7f8c8d',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontSize: 16,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '600', // semi-bold for emphasis
+    marginBottom: 8, // space between the subtitle and its corresponding dropdown
+    color: '#2c3e50', // a dark shade for better readability
   },
 });
