@@ -7,11 +7,19 @@ export interface Relationship {
   endDate: string | null;
 }
 
+export interface User {
+  email: string;
+  password: string; // Ideally, you would never save the raw password, consider using hashing.
+  socketConnection: string | null; // Store the socket id/connection info
+  online: boolean;
+}
+
 export interface FamilyMember {
   id: string;
   name: string;
   birthdate: string;
   deathdate: string | null;
+  user: User | null; // If the member is also a user, populate this field. Otherwise, it'll be null.
   relationships: {
     partner: Relationship[];
     children: FamilyMember[];

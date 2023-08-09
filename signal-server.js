@@ -26,14 +26,22 @@ class FamilyManager {
    * @returns {FamilyMember} - The new family member
    */
   createFamilyMemberFromSignup(data) {
-    const {firstName, lastName} = data;
+    const {firstName, lastName, email, password} = data;
     const name = `${firstName} ${lastName}`;
+
+    const newUser = {
+      email,
+      password, // Reminder: Please hash the password before storing it.
+      socketConnection: null,
+      online: false,
+    };
 
     const newMember = {
       id: this.getNextId(),
       name: name,
       birthdate: '', // Placeholder, adjust as required
       deathdate: null,
+      user: newUser,
       relationships: {
         partner: [],
         children: [],
@@ -95,6 +103,27 @@ class FamilyManager {
     return null;
   }
 
+  findMemberByEmail(email, tree) {
+    if (tree.user && tree.user.email === email) {
+      return tree;
+    }
+
+    for (let child of tree.relationships.children) {
+      const foundMember = this.findMemberByEmail(email, child);
+      if (foundMember) return foundMember;
+    }
+
+    for (let partner of tree.relationships.partner) {
+      const foundMember = this.findMemberByEmail(
+        email,
+        this.families[partner.id],
+      );
+      if (foundMember) return foundMember;
+    }
+
+    return null;
+  }
+
   // Assuming members are added to the root if they start a new family
   addMember(memberData) {
     // If the memberData has no relationships (i.e., parents, partners, children),
@@ -109,16 +138,8 @@ class FamilyManager {
       // Logic to place the member in the correct position in an existing family
       // This logic will depend on the details provided in memberData and how your application works.
     }
-    console.log(this.families);
-    console.log(this.families[memberData.id]);
     // Return the updated data or just the new member data
     return this.families[memberData.id];
-  }
-
-  // Function to handle editing a member.
-  editMember(memberData) {
-    // ... Edit the member details in the family tree.
-    // ... Return the updated data.
   }
 
   // Function to handle adding a relationship.
@@ -150,26 +171,46 @@ app.get('/getMemId', (req, res) => {
 
 app.post('/signup', (req, res) => {
   const data = req.body;
-  let familyId = data.familyId;
-  // Validate input data (newMember structure, familyId, etc.)
-  // For simplicity, I'm skipping this step, but it's crucial in a real application.
+  const {email} = data;
+  let familyId = data.familyID;
 
-  //fix newMember in this context but for now it just works with creating a new user
-  if (familyId) {
-    // Joining an existing family
-    // Check if family with familyId exists
-    if (familyManager.doesMemberExist(familyId)) {
-      // Add new member to the family
-      const updatedData = familyManager.addMember(newMember);
-      res.json({success: true, data: updatedData}); // Send the root member
-    } else {
-      res.status(400).json({error: 'Invalid familyId provided.'});
-    }
+  // Check if email (user) already exists in the family tree
+  let existingMember = null;
+  for (let familyRootId in familyManager.families) {
+    existingMember = familyManager.findMemberByEmail(
+      email,
+      familyManager.families[familyRootId],
+    );
+    if (existingMember) break;
+  }
+
+  if (existingMember) {
+    // If user exists, just update the user details without creating a new member
+    existingMember.user = {
+      email,
+      password: data.password, // Reminder: Please hash the password before storing it.
+      socketConnection: null,
+      online: false,
+    };
+    res.json({success: true, data: existingMember});
   } else {
     const newMember = familyManager.createFamilyMemberFromSignup(data);
-    // Add new member as root if a new family is being created
-    const rootMember = familyManager.addMember(newMember);
-    res.json({success: true, data: rootMember});
+    if (familyId) {
+      // Joining an existing family
+      // Check if family with familyId exists
+      if (familyManager.doesMemberExist(familyId)) {
+        // Add new member to the family
+        const updatedData = familyManager.addMember(newMember);
+        res.json({success: true, data: updatedData}); // Send the root member
+      } else {
+        res.status(400).json({error: 'Invalid familyId provided.'});
+      }
+    } else {
+      const newMember = familyManager.createFamilyMemberFromSignup(data);
+      // Add new member as root if a new family is being created
+      const rootMember = familyManager.addMember(newMember);
+      res.json({success: true, data: rootMember});
+    }
   }
 });
 

@@ -44,8 +44,7 @@ export const SignIn: React.FC<SignInProps> = ({
       firstName.trim() !== '' &&
       lastName.trim() !== '' &&
       password.trim() !== '' &&
-      email.trim() !== '' &&
-      familyID.trim() !== '';
+      email.trim() !== '';
 
     if (isAllValid) {
       const dataToSend = {
@@ -74,7 +73,7 @@ export const SignIn: React.FC<SignInProps> = ({
             setIsFamilyAssociated(true);
             console.log('Action successful:', actionType);
           } else {
-            console.log('Action failed:', data.message);
+            console.log('Action failed:', data.error);
           }
         })
         .catch(error => {
@@ -86,7 +85,6 @@ export const SignIn: React.FC<SignInProps> = ({
       setIsLastNameValid(lastName.trim() !== '');
       setIsPasswordValid(password.trim() !== '');
       setIsEmailValid(email.trim() !== '');
-      setIsFamilyIDValid(familyID.trim() !== '');
     }
   };
 
@@ -152,7 +150,6 @@ export const SignIn: React.FC<SignInProps> = ({
         value={familyID}
         onChangeText={text => {
           setFamilyID(text);
-          setIsFamilyIDValid(text.trim() !== '');
         }}
         placeholder="Family ID"
       />
