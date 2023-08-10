@@ -8,7 +8,7 @@ const app = express();
 const SALT_ROUNDS = 10; // Number of salt rounds for bcrypt hashing
 
 app.use(bodyParser.json());
-
+//NO LONGER USED BUT MAY BE REFERRED TO
 class FamilyManager {
   constructor() {
     this.families = {};
@@ -19,41 +19,10 @@ class FamilyManager {
     this.staticId += 1;
     return this.staticId;
   }
-  /**
-   * Create a new family member from the provided signup data.
-   *
-   * @param {Object} data - The signup data
-   * @returns {FamilyMember} - The new family member
-   */
-  async createFamilyMemberFromSignup(data) {
-    const {firstName, lastName, email, password} = data;
-    const name = `${firstName} ${lastName}`;
 
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
-    const newUser = {
-      email,
-      password: hashedPassword,
-      socketConnection: null,
-      online: false,
-    };
-
-    const newMember = {
-      id: this.getNextId(),
-      name: name,
-      birthdate: '', // Placeholder, adjust as required
-      deathdate: null,
-      user: newUser,
-      relationships: {
-        partner: [],
-        children: [],
-        parents: [],
-      },
-    };
-
-    return newMember;
-  }
-
+  /*
+    Old methods that may need to be referred back to at a later time (for client side stuff)
+  */
   // Recursively check if a member with the given ID exists in a family tree.
   memberExistsInTree(memberId, tree) {
     if (tree.id === memberId) {
@@ -123,37 +92,6 @@ class FamilyManager {
 
     return null;
   }
-
-  // Assuming members are added to the root if they start a new family
-  addMember(memberData) {
-    // If the memberData has no relationships (i.e., parents, partners, children),
-    // we assume they're the root of a new family.
-    if (
-      memberData.relationships.children.length === 0 &&
-      memberData.relationships.parents.length === 0 &&
-      memberData.relationships.partner.length === 0
-    ) {
-      this.families[memberData.id] = memberData; // Add as a new root family member
-    } else {
-      // Logic to place the member in the correct position in an existing family
-      // This logic will depend on the details provided in memberData and how your application works.
-    }
-    // Return the updated data or just the new member data
-    return this.families[memberData.id];
-  }
-
-  // Function to handle adding a relationship.
-  addRelationship(relationshipData) {
-    // ... Add the new relationship to the family tree.
-    // ... Return the updated data.
-  }
-
-  // Function to send error messages.
-  handleError(clientSocket, errorMessage) {
-    // ... Send error message to the client.
-  }
-
-  // Other necessary functions...
 }
 
 class UserManager {
@@ -165,6 +103,12 @@ class UserManager {
     return Object.keys(this.users).filter(email => this.users[email].online);
   }
 
+  /**
+   * Create a new family member from the provided signup data.
+   *
+   * @param {Object} data - The signup data
+   * @returns {FamilyMember} - The new family member
+   */
   async createUserFromSignup(data) {
     const {email, password} = data;
 
@@ -201,16 +145,13 @@ class UserManager {
     }
   }
 
-  // Additional methods if required...
+  // Function to send error messages.
+  handleError(clientSocket, errorMessage) {
+    // ... Send error message to the client.
+  }
 }
 
-const familyManager = new FamilyManager();
-
 const userManager = new UserManager();
-
-app.get('/', (req, res) => {
-  res.send('hello i am a route');
-});
 
 app.post('/signup', async (req, res) => {
   const data = req.body;
@@ -252,51 +193,6 @@ const server = http.createServer(app);
 const io = socket(server);
 
 io.on('connection', socket => {
-  // Handle checking the connection.
-  socket.on('handleConnection', memberId => {
-    const exists = familyManager.doesMemberExist(memberId);
-    if (exists) {
-      socket.emit('memberStatus', {
-        isAssociated: true,
-        receivedMemId: memberId,
-      });
-      // Additional code to send family data or other actions if needed.
-    } else {
-      socket.emit('memberStatus', {
-        isAssociated: false,
-        receivedMemId: memberId,
-      });
-      // Additional code for new members or other actions.
-    }
-  });
-
-  // Handling response from the root member regarding the join request.
-  socket.on('joinResponse', data => {
-    const {accepted, requestingMemberData} = data;
-
-    if (accepted) {
-      // If the request is accepted, add the member to the family.
-      const newMember = familyManager.addMember(requestingMemberData);
-
-      // Notify the requesting member that they've been accepted.
-      if (newMember.user && newMember.user.socketConnection) {
-        const newMemberSocket = io.to(newMember.user.socketConnection);
-        newMemberSocket.emit('joinResponse', {accepted: true});
-      }
-    } else {
-      // If rejected, notify the requesting member.
-      if (
-        requestingMemberData.user &&
-        requestingMemberData.user.socketConnection
-      ) {
-        const requestingMemberSocket = io.to(
-          requestingMemberData.user.socketConnection,
-        );
-        requestingMemberSocket.emit('joinResponse', {accepted: false});
-      }
-    }
-  });
-
   socket.on('userOnline', email => {
     userManager.setUserOnline(email, socket.id);
     let user = userManager.getUserByEmail(email);
@@ -333,47 +229,9 @@ io.on('connection', socket => {
     socket.emit('onlineUsersList', onlineUsers);
   });
 
-  //provides the initial data for the individual
-  socket.on('initialDataRequest', memberId => {
-    socket.emit('initialData', familyManager.getFamilyTreeForMember(memberId));
-  });
-
-  // Handle adding a member.
-  socket.on('addMember', newMemberData => {
-    const updatedData = familyManager.addMember(newMemberData);
-    io.emit('dataUpdate', updatedData); // Send the update to all connected clients.
-  });
-
-  // Handle editing a member.
-  socket.on('editMember', editedMemberData => {
-    const updatedData = familyManager.editMember(editedMemberData);
-    io.emit('dataUpdate', updatedData); // Send the update to all connected clients.
-  });
-
-  // Handle adding a relationship.
-  socket.on('addRelationship', relationshipData => {
-    const updatedData = familyManager.addRelationship(relationshipData);
-    io.emit('dataUpdate', updatedData); // Send the update to all connected clients.
-  });
-
-  // Handling direct peer-to-peer interactions (assuming the use of some sort of P2P library or direct Socket.IO emits).
-  socket.on('collaborationRequest', targetClientId => {
-    io.to(targetClientId).emit('collaborationRequest', socket.id); // Send request from Client 1 to Client 2.
-  });
-
-  socket.on('collaborationResponse', data => {
-    const {targetClientId, response} = data;
-    io.to(targetClientId).emit('collaborationResponse', response); // Send response back to the requesting client.
-  });
-
-  socket.on('liveEdit', data => {
-    const {targetClientId, deltaChanges} = data;
-    io.to(targetClientId).emit('liveEdit', deltaChanges); // Send live edit data directly to another client.
-  });
-
   // Handle errors.
   socket.on('error', errorMessage => {
-    familyManager.handleError(socket, errorMessage);
+    userManager.handleError(socket, errorMessage);
   });
 });
 
