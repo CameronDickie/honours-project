@@ -2,7 +2,12 @@ import React, {createContext, useContext, useEffect, useState} from 'react';
 import io, {Socket} from 'socket.io-client';
 import {Platform} from 'react-native';
 import {ServerToClientEvents, ClientToServerEvents} from '../App'; // Update this import path!
-import {FamilyData, useFamilyData, FamilyMember} from './FamilyDataContext';
+import {
+  FamilyData,
+  useFamilyData,
+  FamilyMember,
+  User,
+} from './FamilyDataContext';
 
 const SERVER_URL =
   Platform.OS === 'android'
@@ -14,6 +19,7 @@ interface SocketContextProps {
   isFamilyAssociated: boolean;
   setIsFamilyAssociated: React.Dispatch<React.SetStateAction<boolean>>;
   memberId: number | null;
+  onlineUsers: string[];
   // ... any other socket-related states you might want to expose
 }
 
@@ -25,6 +31,7 @@ interface MemberStatus {
   isAssociated: boolean;
   receivedMemId: number;
 }
+
 const SocketContext = createContext<SocketContextProps | undefined>(undefined);
 
 export const useSocket = () => {
@@ -70,6 +77,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isFamilyAssociated, setIsFamilyAssociated] = useState(false);
   const [memberId, setMemberId] = useState(0); // to be replaced with cookie information but for now incremental integers work
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   useEffect(() => {
     const socketIo = io(SERVER_URL);
@@ -103,6 +111,29 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
       console.log('Received joinResponse:', data);
       // Handle the response as required
     });
+    // Handle user status changes
+    socketIo.on(
+      'userStatusChange',
+      (data: {email: string; status: 'online' | 'offline'}) => {
+        if (data.status === 'online') {
+          setOnlineUsers(prevEmails => {
+            if (!prevEmails.includes(data.email)) {
+              return [...prevEmails, data.email]; // Add the email to the list if not already present
+            }
+            return prevEmails; // Return previous state if email already present
+          });
+        } else if (data.status === 'offline') {
+          setOnlineUsers(prevEmails =>
+            prevEmails.filter(email => email !== data.email),
+          ); // Remove the email from the list
+        }
+      },
+    );
+
+    socketIo.on('onlineUsersList', (onlineUsers: string[]) => {
+      console.log(onlineUsers);
+      setOnlineUsers(onlineUsers); // Directly set the list of online users
+    });
 
     return () => {
       socketIo.disconnect();
@@ -112,7 +143,13 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
   //do I need to export all of these values? can this be reduced?
   return (
     <SocketContext.Provider
-      value={{socket, isFamilyAssociated, memberId, setIsFamilyAssociated}}>
+      value={{
+        socket,
+        isFamilyAssociated,
+        memberId,
+        setIsFamilyAssociated,
+        onlineUsers,
+      }}>
       {children}
     </SocketContext.Provider>
   );

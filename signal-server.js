@@ -156,7 +156,57 @@ class FamilyManager {
   // Other necessary functions...
 }
 
+class UserManager {
+  constructor() {
+    this.users = {};
+  }
+
+  getOnlineUsers() {
+    return Object.keys(this.users).filter(email => this.users[email].online);
+  }
+
+  async createUserFromSignup(data) {
+    const {email, password} = data;
+
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+    const newUser = {
+      email,
+      password: hashedPassword,
+      socketConnection: null,
+      online: false,
+    };
+
+    this.users[email] = newUser;
+    return newUser;
+  }
+
+  getUserByEmail(email) {
+    return this.users[email] || null;
+  }
+
+  setUserOnline(email, socketId) {
+    const user = this.getUserByEmail(email);
+    if (user) {
+      user.online = true;
+      user.socketConnection = socketId;
+    }
+  }
+
+  setUserOffline(email) {
+    const user = this.getUserByEmail(email);
+    if (user) {
+      user.online = false;
+      user.socketConnection = null;
+    }
+  }
+
+  // Additional methods if required...
+}
+
 const familyManager = new FamilyManager();
+
+const userManager = new UserManager();
 
 app.get('/', (req, res) => {
   res.send('hello i am a route');
@@ -166,96 +216,37 @@ app.post('/signup', async (req, res) => {
   const data = req.body;
   const {email} = data;
 
-  // Check if email (user) already exists in the family tree
-  let existingMember = null;
-  for (let familyRootId in familyManager.families) {
-    existingMember = familyManager.findMemberByEmail(
-      email,
-      familyManager.families[familyRootId],
-    );
-    if (existingMember) break;
+  // Check if email (user) already exists
+  const existingUser = userManager.getUserByEmail(email);
+
+  if (existingUser) {
+    return res.status(400).json({error: 'User already exists'});
   }
 
-  if (existingMember) {
-    // If user exists, just update the user details without creating a new member
-    existingMember.user.password = await bcrypt.hash(
-      data.password,
-      SALT_ROUNDS,
-    );
-    res.json({success: true, data: existingMember.id});
-  } else {
-    const newMember = await familyManager.createFamilyMemberFromSignup(data);
-    // Add new member as root, implying a new family is being created
-    const rootMember = familyManager.addMember(newMember);
-    res.json({success: true, data: rootMember.id});
-  }
+  const newUser = await userManager.createUserFromSignup(data);
+  res.json({success: true, data: newUser});
 });
 
 app.post('/login', async (req, res) => {
   const {email, password} = req.body;
 
-  let existingMember = null;
-  for (let familyRootId in familyManager.families) {
-    existingMember = familyManager.findMemberByEmail(
-      email,
-      familyManager.families[familyRootId],
-    );
-    if (existingMember) break;
-  }
+  const existingUser = userManager.getUserByEmail(email);
 
-  if (!existingMember || !existingMember.user) {
+  if (!existingUser) {
     return res.status(400).json({error: 'User does not exist'});
   }
 
   const isPasswordCorrect = await bcrypt.compare(
     password,
-    existingMember.user.password,
+    existingUser.password,
   );
 
   if (isPasswordCorrect) {
     // In a real-world scenario, here you would generate a session/token and send it to the client.
-    res.json({success: true, data: existingMember.id});
+    res.json({success: true, data: existingUser});
   } else {
     res.status(400).json({error: 'Invalid password'});
   }
-});
-
-app.post('/joinFamily', (req, res) => {
-  const {familyIdStr, familyData} = req.body;
-  const familyId = Number(familyIdStr);
-  // Check if familyId exists in the families database.
-  const familyExists = familyManager.doesMemberExist(familyId);
-
-  if (!familyExists) {
-    return res.status(404).json({error: 'Family not found.'});
-  }
-
-  // Get family tree for given familyId
-  const familyTree = familyManager.getFamilyTreeForMember(familyId);
-
-  // Assuming the first member in the family tree is the closest to the root.
-  // Note: This might need to be adjusted based on your family data structure.
-  const rootMember = familyTree;
-
-  // If the root member is online, send a request to confirm the new member joining.
-  // This assumes that the socketConnection field holds the Socket.IO connection.
-  if (
-    rootMember.user &&
-    rootMember.user.online &&
-    rootMember.user.socketConnection
-  ) {
-    const rootSocket = io.to(rootMember.user.socketConnection);
-    rootSocket.emit('joinRequest', {
-      requestingMemberData: familyData,
-      // You can add more info if needed.
-    });
-  } else {
-    return res.status(400).json({error: 'Root family member is not online.'});
-  }
-
-  // The actual joining will be done in the socket event after confirmation.
-  // Just send a response that request has been made.
-  return res.json({success: true, message: 'Request to join family sent.'});
 });
 const server = http.createServer(app);
 const io = socket(server);
@@ -304,6 +295,28 @@ io.on('connection', socket => {
         requestingMemberSocket.emit('joinResponse', {accepted: false});
       }
     }
+  });
+
+  socket.on('userOnline', email => {
+    userManager.setUserOnline(email, socket.id);
+    let user = userManager.getUserByEmail(email);
+    socket.email = email; // Storing the email in the socket session for use during disconnect
+    console.log('setting this user online:', user);
+    io.emit('userStatusChange', {email, status: 'online'});
+    // Other necessary actions...
+  });
+
+  socket.on('disconnect', () => {
+    if (socket.email) {
+      // Check if email exists in the socket session
+      userManager.setUserOffline(socket.email);
+      io.emit('userStatusChange', {email: socket.email, status: 'offline'});
+    }
+  });
+
+  socket.on('askForOnlineUsers', () => {
+    const onlineUsers = userManager.getOnlineUsers();
+    socket.emit('onlineUsersList', onlineUsers);
   });
 
   //provides the initial data for the individual
