@@ -220,6 +220,43 @@ app.post('/login', async (req, res) => {
   }
 });
 
+app.post('/joinFamily', (req, res) => {
+  const {familyIdStr, familyData} = req.body;
+  const familyId = Number(familyIdStr);
+  // Check if familyId exists in the families database.
+  const familyExists = familyManager.doesMemberExist(familyId);
+
+  if (!familyExists) {
+    return res.status(404).json({error: 'Family not found.'});
+  }
+
+  // Get family tree for given familyId
+  const familyTree = familyManager.getFamilyTreeForMember(familyId);
+
+  // Assuming the first member in the family tree is the closest to the root.
+  // Note: This might need to be adjusted based on your family data structure.
+  const rootMember = familyTree;
+
+  // If the root member is online, send a request to confirm the new member joining.
+  // This assumes that the socketConnection field holds the Socket.IO connection.
+  if (
+    rootMember.user &&
+    rootMember.user.online &&
+    rootMember.user.socketConnection
+  ) {
+    const rootSocket = io.to(rootMember.user.socketConnection);
+    rootSocket.emit('joinRequest', {
+      requestingMemberData: familyData,
+      // You can add more info if needed.
+    });
+  } else {
+    return res.status(400).json({error: 'Root family member is not online.'});
+  }
+
+  // The actual joining will be done in the socket event after confirmation.
+  // Just send a response that request has been made.
+  return res.json({success: true, message: 'Request to join family sent.'});
+});
 const server = http.createServer(app);
 const io = socket(server);
 
@@ -239,6 +276,33 @@ io.on('connection', socket => {
         receivedMemId: memberId,
       });
       // Additional code for new members or other actions.
+    }
+  });
+
+  // Handling response from the root member regarding the join request.
+  socket.on('joinResponse', data => {
+    const {accepted, requestingMemberData} = data;
+
+    if (accepted) {
+      // If the request is accepted, add the member to the family.
+      const newMember = familyManager.addMember(requestingMemberData);
+
+      // Notify the requesting member that they've been accepted.
+      if (newMember.user && newMember.user.socketConnection) {
+        const newMemberSocket = io.to(newMember.user.socketConnection);
+        newMemberSocket.emit('joinResponse', {accepted: true});
+      }
+    } else {
+      // If rejected, notify the requesting member.
+      if (
+        requestingMemberData.user &&
+        requestingMemberData.user.socketConnection
+      ) {
+        const requestingMemberSocket = io.to(
+          requestingMemberData.user.socketConnection,
+        );
+        requestingMemberSocket.emit('joinResponse', {accepted: false});
+      }
     }
   });
 

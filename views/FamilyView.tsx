@@ -7,9 +7,10 @@ import {
   StyleSheet,
   Modal,
   TextInput,
-  Button,
   Switch,
-  Platform, ActionSheetIOS
+  Platform,
+  ActionSheetIOS,
+  Alert,
 } from 'react-native';
 import {Picker} from '@react-native-picker/picker';
 import Tree from '../components/Tree';
@@ -18,6 +19,7 @@ import {
   useFamilyData,
   getIndividuals,
 } from '../components/FamilyDataContext';
+import {performJoinFamily} from '../components/SocketContext';
 
 interface FamilyViewProps {
   screenHeight: number;
@@ -40,6 +42,10 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
 
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedUser2, setSelectedUser2] = useState<string | null>(null);
+
+  const [arrowModalVisible, setArrowModalVisible] = useState(false);
+  const [displayId, setDisplayId] = useState(false);
+  const [joinFamilyId, setJoinFamilyId] = useState<string>('');
 
   const allUsers: string[] = []; // This will store all the user names for the dropdown
 
@@ -102,7 +108,36 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
   };
 
   const handleArrowPress = () => {
-    console.log(getIndividuals(familyData.rootMember, ['name', 'birthdate']));
+    setArrowModalVisible(true);
+  };
+  const handleJoinFamily = () => {
+    //TODO: this needs to be refactored as this is not how i want to go about this
+
+    // First, present the user with a warning
+    Alert.alert(
+      'Join Another Family',
+      'You will need to be re-invited to your current family if you join another.',
+      [
+        {
+          text: 'Cancel',
+          onPress: () => console.log('Joining family cancelled.'),
+          style: 'cancel',
+        },
+        {
+          text: 'Accept',
+          onPress: () => {
+            // The logic for joining a family after the user accepts the warning
+            console.log(`Joining family with ID: ${joinFamilyId}`);
+            if (familyData.rootMember !== null) {
+              performJoinFamily(joinFamilyId, familyData.rootMember);
+            } else {
+              console.log('no family data in storage');
+            }
+          },
+        },
+      ],
+      {cancelable: true},
+    );
   };
 
   const showActionSheet = (setSelected: (value: string) => void) => {
@@ -111,11 +146,11 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
         options: ['Cancel', ...allUsers],
         cancelButtonIndex: 0,
       },
-      (buttonIndex) => {
+      buttonIndex => {
         if (buttonIndex !== 0) {
           setSelected(allUsers[buttonIndex - 1]);
         }
-      }
+      },
     );
   };
 
@@ -174,16 +209,19 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
             />
 
             {Platform.OS === 'ios' ? (
-              <TouchableOpacity onPress={() => showActionSheet(setSelectedUser)}>
+              <TouchableOpacity
+                onPress={() => showActionSheet(setSelectedUser)}>
                 <Text style={styles.input}>
-                  {selectedUser || "Select User..."}
+                  {selectedUser || 'Select User...'}
                 </Text>
               </TouchableOpacity>
             ) : (
               <Picker
                 selectedValue={selectedUser}
                 style={styles.pickerStyle}
-                onValueChange={itemValue => setSelectedUser(itemValue as string)}>
+                onValueChange={itemValue =>
+                  setSelectedUser(itemValue as string)
+                }>
                 <Picker.Item label="Select User..." value={null} />
                 {allUsers.map((user, index) => (
                   <Picker.Item key={index} label={user} value={user} />
@@ -192,9 +230,10 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
             )}
 
             {Platform.OS === 'ios' ? (
-              <TouchableOpacity onPress={() => showActionSheet(setSelectedUser2)}>
+              <TouchableOpacity
+                onPress={() => showActionSheet(setSelectedUser2)}>
                 <Text style={styles.input}>
-                  {selectedUser2 || "Select User..."}
+                  {selectedUser2 || 'Select User...'}
                 </Text>
               </TouchableOpacity>
             ) : (
@@ -249,6 +288,51 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
           </View>
         </ScrollView>
         {/* </TouchableOpacity> */}
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={arrowModalVisible}>
+        <ScrollView contentContainerStyle={styles.modalView}>
+          <Text style={[styles.modalTitle, styles.centeredText]}>
+            Join a Family
+          </Text>
+
+          <View style={styles.inlineContainer}>
+            <Switch
+              value={displayId}
+              onValueChange={setDisplayId}
+              style={styles.switch}
+            />
+            <Text style={styles.subtitle}>Display Family ID</Text>
+          </View>
+
+          {displayId && (
+            <Text style={[styles.centeredText, {marginBottom: 20}]}>
+              {familyData.rootMember?.id}
+            </Text>
+          )}
+
+          <TextInput
+            placeholder="Enter Family ID to join"
+            value={joinFamilyId}
+            onChangeText={setJoinFamilyId}
+            style={styles.input}
+          />
+
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handleJoinFamily}>
+            <Text style={styles.buttonText}>Join Family</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => setArrowModalVisible(false)}>
+            <Text style={styles.buttonText}>Close</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </Modal>
     </View>
   );
