@@ -301,7 +301,6 @@ io.on('connection', socket => {
     userManager.setUserOnline(email, socket.id);
     let user = userManager.getUserByEmail(email);
     socket.email = email; // Storing the email in the socket session for use during disconnect
-    console.log('setting this user online:', user);
     io.emit('userStatusChange', {email, status: 'online'});
     // Other necessary actions...
   });

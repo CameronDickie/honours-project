@@ -1,5 +1,7 @@
 // FamilyDataContext.tsx
 import React, {createContext, useContext, useState} from 'react';
+import 'react-native-get-random-values';
+import {v4 as uuidv4} from 'uuid';
 
 export interface Relationship {
   id: string;
@@ -18,8 +20,8 @@ export interface FamilyMember {
   id: string;
   name: string;
   birthdate: string;
-  deathdate: string | null;
-  user: User | null; // If the member is also a user, populate this field. Otherwise, it'll be null.
+  deathdate: string | null | undefined;
+  user: string | null; // If the member is also a user, populate this field with their email. Otherwise, it'll be null.
   relationships: {
     partner: Relationship[];
     children: FamilyMember[];
@@ -86,6 +88,25 @@ const extractAttributesFromTree = (
   });
 
   return results;
+};
+
+export const createFamilyMember = (
+  memberData: Partial<FamilyMember>,
+): FamilyMember => {
+  // Generate a unique ID for the new family member
+  const id = uuidv4();
+  return {
+    id, // Set the unique ID
+    name: memberData.name || '',
+    birthdate: memberData.birthdate || '',
+    deathdate: memberData.deathdate || null,
+    user: memberData.user || null,
+    relationships: memberData.relationships || {
+      partner: [],
+      children: [],
+      parents: [],
+    },
+  };
 };
 
 export const getIndividuals = (

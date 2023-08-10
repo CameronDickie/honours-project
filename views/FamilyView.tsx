@@ -53,7 +53,7 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
   const populateUserNames = (member: FamilyMember | null) => {
     if (!member) return;
 
-    if (member.user && member.user.email) {
+    if (member.user) {
       allUsers.push(member.name);
     }
 
@@ -76,14 +76,7 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
       name: memberName,
       birthdate: memberBirthdate,
       deathdate: memberDeathdate || null,
-      user: isUser
-        ? {
-            email: memberEmail,
-            password: memberPassword, // Remember to hash this before storing or sending to any server
-            socketConnection: null,
-            online: false,
-          }
-        : null,
+      user: isUser ? memberEmail : null,
       relationships: {
         partner: [],
         children: [],
