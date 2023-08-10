@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import {Picker} from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useSocket} from '../components/SocketContext';
 import {
@@ -63,8 +64,15 @@ export const Authentication: React.FC = () => {
     }
   };
 
-  const handleJoinRequest = (email: string) => {
-    console.log(`Requesting to join ${email}'s family.`);
+  const handleJoinRequest = (targetEmail: string) => {
+    console.log(`Requesting to join ${targetEmail}'s family.`);
+    if (socket) {
+      const requestData = {
+        requesterEmail: email,
+        targetEmail: targetEmail,
+      };
+      socket.emit('requestToJoin', requestData);
+    }
     // Here you'll probably need to send a socket event or make another API call.
   };
   const handleCreateFamilySubmission = () => {
@@ -117,6 +125,32 @@ export const Authentication: React.FC = () => {
     );
   };
 
+  //a method to create a root member during the signup phase.
+  const createRootMember = () => {
+    // Use firstName and lastName to set the root member's name
+    setName(firstName + ' ' + lastName);
+    // Construct the data for the new family member
+    const memberData = {
+      name: firstName + ' ' + lastName,
+      birthdate: '',
+      deathdate: undefined,
+      user: email, // Using 'email' to populate the 'user' field
+      relationships: {
+        partner: [],
+        children: [],
+        parents: [],
+      },
+    };
+
+    // Use the createFamilyMember function to create a new family member with a unique ID
+    const newFamilyMember = createFamilyMember(memberData);
+    setFamilyData(prevData => {
+      const updatedData = {...prevData, rootMember: newFamilyMember};
+      saveFamilyDataToStorage(updatedData); // Save data to AsyncStorage
+      return updatedData;
+    });
+  };
+
   const handleAction = () => {
     const dataToSend = {
       email,
@@ -138,8 +172,12 @@ export const Authentication: React.FC = () => {
         .then(data => {
           if (data.success && socket) {
             socket.emit('userOnline', email);
-
             socket.emit('askForOnlineUsers');
+
+            // Create the root member for the user after successful sign up
+            createRootMember();
+
+            // Now present the user with family options
             handleFamilyChoice();
           } else {
             console.log('Action failed:', data.error);
@@ -227,14 +265,21 @@ export const Authentication: React.FC = () => {
       {view === 'joinFamily' && (
         <ScrollView>
           <Text style={styles.subtitle}>Online users to join</Text>
-          {onlineUsers.map((user, index) => (
-            <View key={index} style={styles.userRow}>
-              <Text>{user}</Text>
-              <TouchableOpacity onPress={() => handleJoinRequest(user)}>
-                <Text style={styles.joinButton}>+</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+          {onlineUsers.map((user, index) => {
+            if (familyData.rootMember && user !== familyData.rootMember.user) {
+              // Check to exclude the current user
+              return (
+                <View key={index} style={styles.userRow}>
+                  <Text>{user}</Text>
+                  <TouchableOpacity onPress={() => handleJoinRequest(user)}>
+                    <Text style={styles.joinButton}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            } else {
+              return null; // Render nothing for the current user
+            }
+          })}
           <TouchableOpacity
             style={styles.createNewFamilyButton}
             onPress={handleCreateFamily}>

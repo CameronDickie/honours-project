@@ -135,6 +135,11 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
       setOnlineUsers(onlineUsers); // Directly set the list of online users
     });
 
+    socketIo.on('joinRequest', data => {
+      console.log(`User ${data.from} wants to join your family!`);
+      // Handle UI update or show a notification based on this
+    });
+
     return () => {
       socketIo.disconnect();
     };

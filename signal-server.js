@@ -313,6 +313,21 @@ io.on('connection', socket => {
     }
   });
 
+  socket.on('requestToJoin', requestData => {
+    const targetUser = userManager.getUserByEmail(requestData.targetEmail);
+    if (targetUser.socketConnection) {
+      io.to(targetUser.socketConnection).emit('joinRequest', {
+        from: requestData.requesterEmail,
+      });
+    } else {
+      console.log(
+        'targetUser',
+        targetUser,
+        'has no attribute socketConnection',
+      );
+    }
+  });
+
   socket.on('askForOnlineUsers', () => {
     const onlineUsers = userManager.getOnlineUsers();
     socket.emit('onlineUsersList', onlineUsers);
