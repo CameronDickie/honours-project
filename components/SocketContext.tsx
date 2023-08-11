@@ -9,6 +9,8 @@ import {
   User,
 } from './FamilyDataContext';
 
+import {useNotification} from './NotificationController';
+
 const SERVER_URL =
   Platform.OS === 'android'
     ? 'http://192.168.122.1:9000'
@@ -73,12 +75,44 @@ export async function performJoinFamily(
 }
 
 export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
-  const {setFamilyData} = useFamilyData();
+  const {setFamilyData, familyData} = useFamilyData();
+  const {showNotification} = useNotification();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isFamilyAssociated, setIsFamilyAssociated] = useState(false);
   const [memberId, setMemberId] = useState(0); // to be replaced with cookie information but for now incremental integers work
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
+  useEffect(() => {
+    const socketIo = socket;
+    socketIo?.on('joinRequest', data => {
+      showNotification({
+        message: `User ${data.from} wants to join your family! If you hit accept, you will allow them to view your family tree.`,
+        approve: () => {
+          console.log('Approved', familyData);
+          // Handle approve logic...
+
+          // Get the current family data from the FamilyDataContext
+          // Emit the family data to the signaling server with the id of the requesting client
+          socketIo.emit('shareFamilyData', {
+            to: data.from,
+            familyData: familyData,
+          });
+        },
+        decline: () => {
+          console.log('Declined');
+          // Handle decline logic...
+        },
+      });
+    });
+
+    socketIo?.on('receiveFamilyData', data => {
+      console.log('Received family data:', data);
+
+      //display the relationship view but for now lets just console.log
+
+      // setFamilyData(data);
+    });
+  }, [familyData]);
   useEffect(() => {
     const socketIo = io(SERVER_URL);
     setSocket(socketIo);
@@ -99,6 +133,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
       }
     });
 
+    //i think this is no longer used???
     //this is their first recieving of the data, which should be organized properly and the root member properly assigned
     socketIo.on('initialData', (data: FamilyMember) => {
       if (!data) return;
@@ -107,6 +142,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
       setIsFamilyAssociated(true);
     });
 
+    //i don't think that this is being used either but im not sure about this one
     socketIo.on('joinResponse', (data: any) => {
       console.log('Received joinResponse:', data);
       // Handle the response as required
@@ -136,8 +172,32 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
     });
 
     socketIo.on('joinRequest', data => {
-      console.log(`User ${data.from} wants to join your family!`);
-      // Handle UI update or show a notification based on this
+      showNotification({
+        message: `User ${data.from} wants to join your family! If you hit accept, you will allow them to view your family tree.`,
+        approve: () => {
+          console.log('Approved', familyData);
+          // Handle approve logic...
+
+          // Get the current family data from the FamilyDataContext
+          // Emit the family data to the signaling server with the id of the requesting client
+          socketIo.emit('shareFamilyData', {
+            to: data.from,
+            familyData: familyData,
+          });
+        },
+        decline: () => {
+          console.log('Declined');
+          // Handle decline logic...
+        },
+      });
+    });
+
+    socketIo.on('receiveFamilyData', data => {
+      console.log('Received family data:', data);
+
+      //display the relationship view but for now lets just console.log
+
+      // setFamilyData(data);
     });
 
     return () => {

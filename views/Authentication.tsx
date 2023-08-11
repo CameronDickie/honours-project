@@ -92,8 +92,8 @@ export const Authentication: React.FC = () => {
 
     // Use the createFamilyMember function to create a new family member with a unique ID
     const newFamilyMember = createFamilyMember(memberData);
-    setFamilyData(prevData => {
-      const updatedData = {...prevData, rootMember: newFamilyMember};
+    setFamilyData(() => {
+      const updatedData = {rootMember: newFamilyMember};
       saveFamilyDataToStorage(updatedData); // Save data to AsyncStorage
       setIsFamilyAssociated(true);
       return updatedData;
@@ -144,8 +144,8 @@ export const Authentication: React.FC = () => {
 
     // Use the createFamilyMember function to create a new family member with a unique ID
     const newFamilyMember = createFamilyMember(memberData);
-    setFamilyData(prevData => {
-      const updatedData = {...prevData, rootMember: newFamilyMember};
+    setFamilyData(() => {
+      const updatedData = {rootMember: newFamilyMember};
       saveFamilyDataToStorage(updatedData); // Save data to AsyncStorage
       return updatedData;
     });

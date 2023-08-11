@@ -5,7 +5,11 @@ import {Authentication} from './views/Authentication';
 import {FamilyView} from './views/FamilyView';
 import {FamilyDataProvider, FamilyData} from './components/FamilyDataContext';
 import {SocketProvider, useSocket} from './components/SocketContext';
-
+import {
+  NotificationProvider,
+  useNotification,
+} from './components/NotificationController';
+import {NotificationModal} from './components/NotificationModal';
 /*
 Socket event section should be better defined
 */
@@ -45,6 +49,10 @@ interface UserData {
   familyID: string;
 }
 
+const NotificationDisplay = () => {
+  const {notification, isActive} = useNotification();
+  return <NotificationModal notification={notification} isActive={isActive} />;
+};
 /*
 A JSX object which serves to provide screen information and control what view the user is seeing
 */
@@ -67,9 +75,12 @@ const ViewController = (): JSX.Element => {
 function App(): JSX.Element {
   return (
     <FamilyDataProvider>
-      <SocketProvider>
-        <ViewController />
-      </SocketProvider>
+      <NotificationProvider>
+        <SocketProvider>
+          <ViewController />
+          <NotificationDisplay />
+        </SocketProvider>
+      </NotificationProvider>
     </FamilyDataProvider>
   );
 }

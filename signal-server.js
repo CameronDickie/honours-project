@@ -229,6 +229,23 @@ io.on('connection', socket => {
     socket.emit('onlineUsersList', onlineUsers);
   });
 
+  socket.on('shareFamilyData', data => {
+    const targetUser = userManager.getUserByEmail(data.to);
+    if (targetUser.socketConnection) {
+      console.log(data);
+      socket
+        .to(targetUser.socketConnection)
+        .emit('receiveFamilyData', data.familyData);
+    } else {
+      console.log(
+        'targetUser',
+        targetUser,
+        'has no attribute socketConnection',
+      );
+    }
+    // Forward the family data to the client specified by the 'to' property in the received data
+  });
+
   // Handle errors.
   socket.on('error', errorMessage => {
     userManager.handleError(socket, errorMessage);
