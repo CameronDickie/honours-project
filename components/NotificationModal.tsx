@@ -8,11 +8,13 @@ interface NotificationModalProps {
     decline?: () => void;
   } | null;
   isActive: boolean;
+  hideNotification: () => void;
 }
 
 export const NotificationModal: React.FC<NotificationModalProps> = ({
   notification,
   isActive,
+  hideNotification,
 }) => {
   // Use Animated library for slide-in effect (this is a basic implementation, you can enhance it)
   const position = new Animated.Value(isActive ? -100 : 0);
@@ -32,7 +34,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       {notification.approve && (
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={notification.approve}>
+          onPress={() => {
+            if (notification.approve) notification.approve();
+            hideNotification();
+          }}>
           <Text style={styles.actionText}>✔️</Text>
         </TouchableOpacity>
       )}
@@ -40,7 +45,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       {notification.decline && (
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={notification.decline}>
+          onPress={() => {
+            if (notification.decline) notification.decline();
+            hideNotification();
+          }}>
           <Text style={styles.actionText}>❌</Text>
         </TouchableOpacity>
       )}

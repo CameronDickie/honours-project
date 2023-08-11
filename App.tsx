@@ -50,8 +50,14 @@ interface UserData {
 }
 
 const NotificationDisplay = () => {
-  const {notification, isActive} = useNotification();
-  return <NotificationModal notification={notification} isActive={isActive} />;
+  const {notification, isActive, hideNotification} = useNotification();
+  return (
+    <NotificationModal
+      notification={notification}
+      isActive={isActive}
+      hideNotification={hideNotification}
+    />
+  );
 };
 /*
 A JSX object which serves to provide screen information and control what view the user is seeing
