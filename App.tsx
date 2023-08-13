@@ -1,5 +1,5 @@
-import React, {useState, useEffect} from 'react';
-import {View, Button, TextInput, StyleSheet, Text} from 'react-native';
+import React from 'react';
+import {View} from 'react-native';
 import {useWindowDimensions} from 'react-native';
 import {Authentication} from './views/Authentication';
 import {FamilyView} from './views/FamilyView';

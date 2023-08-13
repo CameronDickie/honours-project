@@ -10,12 +10,10 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import {Picker} from '@react-native-picker/picker';
 import {stringify, parse} from 'flatted';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useSocket} from '../components/SocketContext';
 import {
-  FamilyMember,
   createFamilyMember,
   useFamilyData,
 } from '../components/FamilyDataContext';
@@ -205,9 +203,6 @@ export const Authentication: React.FC = () => {
         .then(response => response.json())
         .then(data => {
           if (data.success && socket) {
-            // setFamilyData(prevData => ({...prevData, rootMember: data.data}));
-            // setIsFamilyAssociated(true)
-
             loadFamilyDataFromStorage(); // Load data from AsyncStorage
             socket.emit('userOnline', email);
 

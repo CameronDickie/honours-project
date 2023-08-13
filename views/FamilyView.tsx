@@ -1,11 +1,6 @@
 import React, {useState} from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import Tree from '../components/Tree';
-import {
-  FamilyMember,
-  useFamilyData,
-  getIndividuals,
-} from '../components/FamilyDataContext';
 import NewMemberView from './NewMemberView';
 
 interface FamilyViewProps {
@@ -17,8 +12,6 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
   screenHeight,
   screenWidth,
 }) => {
-  const {familyData, setFamilyData} = useFamilyData();
-
   const [creatingFamilyMember, setCreatingFamilyMember] =
     useState<boolean>(false);
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet, Animated, TouchableOpacity} from 'react-native';
+import {Text, StyleSheet, Animated, TouchableOpacity} from 'react-native';
 
 interface NotificationModalProps {
   notification: {

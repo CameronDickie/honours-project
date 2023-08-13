@@ -1,13 +1,7 @@
 import React, {createContext, useContext, useEffect, useState} from 'react';
 import io, {Socket} from 'socket.io-client';
 import {Platform} from 'react-native';
-import {ServerToClientEvents, ClientToServerEvents} from '../App'; // Update this import path!
-import {
-  FamilyData,
-  useFamilyData,
-  FamilyMember,
-  User,
-} from './FamilyDataContext';
+import {useFamilyData, FamilyMember} from './FamilyDataContext';
 
 import {useNotification} from './NotificationController';
 import {parse, stringify} from 'flatted';
