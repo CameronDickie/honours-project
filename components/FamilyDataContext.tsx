@@ -114,17 +114,26 @@ const extractAttributes = (member: FamilyMember, attributes: string[]): any => {
 export const extractAttributesFromTree = (
   root: FamilyMember | null,
   attributes: string[],
+  visited: Set<string> = new Set(), // new parameter to keep track of visited members
 ): any[] => {
   if (!root) return [];
+
+  // If we've already visited this member, return an empty array to halt the recursion for this path
+  if (visited.has(root.id)) {
+    return [];
+  }
+
+  // Mark the current member as visited
+  visited.add(root.id);
 
   const currentMemberAttributes = extractAttributes(root, attributes);
   const results: any[] = [currentMemberAttributes];
 
   root.relationships.children.forEach(child => {
-    results.push(...extractAttributesFromTree(child, attributes));
+    results.push(...extractAttributesFromTree(child, attributes, visited)); // pass the visited set
   });
   root.relationships.parents.forEach(parent => {
-    results.push(...extractAttributesFromTree(parent, attributes));
+    results.push(...extractAttributesFromTree(parent, attributes, visited)); // pass the visited set
   });
 
   return results;

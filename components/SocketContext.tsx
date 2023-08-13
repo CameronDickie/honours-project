@@ -10,6 +10,8 @@ import {
 } from './FamilyDataContext';
 
 import {useNotification} from './NotificationController';
+import {parse, stringify} from 'flatted';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SERVER_URL =
   Platform.OS === 'android'
@@ -53,9 +55,18 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
   const [memberId, setMemberId] = useState(0); // to be replaced with cookie information but for now incremental integers work
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
+  //this stringify(flatted) is terribly inefficient, but is needed to break the cyclical nature of the json object
+  const saveFamilyDataToStorage = async (data: typeof familyData) => {
+    try {
+      await AsyncStorage.setItem('familyData', stringify(data));
+    } catch (error) {
+      console.error("Couldn't save family data to storage:", error);
+    }
+  };
   useEffect(() => {
     const socketIo = socket;
-    socketIo?.on('joinRequest', data => {
+    if (!socketIo) return;
+    socketIo.on('joinRequest', data => {
       showNotification({
         message: `User ${data.from} wants to join your family! If you hit accept, you will allow them to view your family tree.`,
         approve: () => {
@@ -76,11 +87,14 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
       });
     });
 
-    socketIo?.on('receiveFamilyData', data => {
+    socketIo.on('receiveFamilyData', data => {
       console.log('Received family data:', data);
-      console.log('myFamilyData', familyData);
+      console.log('familyData after useEffect triggered:', familyData);
       //display the relationship view but for now lets just console.log
-
+      //currently in the joinFamily view in the Authentication section
+      setToMergeData(() => {
+        return data;
+      });
       // setFamilyData(data);
     });
   }, [familyData]);
@@ -163,19 +177,15 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
       });
     });
 
-    socketIo.on('receiveFamilyData', data => {
-      console.log('Received family data:', data);
-      //display the relationship view but for now lets just console.log
-      //currently in the joinFamily view in the Authentication section
-      setToMergeData(() => {
-        return data;
-      });
-      // setFamilyData(data);
+    socketIo.on('familyUpdate', data => {
+      if (data.type === 'addMember') {
+        const newFamilyData = {rootMember: parse(data.rootMember)};
+        setFamilyData(() => {
+          saveFamilyDataToStorage(newFamilyData);
+          return newFamilyData;
+        });
+      }
     });
-
-    return () => {
-      socketIo.disconnect();
-    };
   }, []);
 
   //do I need to export all of these values? can this be reduced?

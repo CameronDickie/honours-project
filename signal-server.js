@@ -3,96 +3,12 @@ const http = require('http');
 const socket = require('socket.io');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt'); // Require bcrypt for hashing
+const {parse, stringify} = require('flatted');
 
 const app = express();
 const SALT_ROUNDS = 10; // Number of salt rounds for bcrypt hashing
 
 app.use(bodyParser.json());
-//NO LONGER USED BUT MAY BE REFERRED TO
-class FamilyManager {
-  constructor() {
-    this.families = {};
-    this.staticId = 0;
-    // other necessary instance variables...
-  }
-  getNextId() {
-    this.staticId += 1;
-    return this.staticId;
-  }
-
-  /*
-    Old methods that may need to be referred back to at a later time (for client side stuff)
-  */
-  // Recursively check if a member with the given ID exists in a family tree.
-  memberExistsInTree(memberId, tree) {
-    if (tree.id === memberId) {
-      return true;
-    }
-
-    for (let childId of tree.relationships.children) {
-      if (this.memberExistsInTree(memberId, this.families[childId])) {
-        return true;
-      }
-    }
-
-    for (let partner of tree.relationships.partner) {
-      if (this.memberExistsInTree(memberId, this.families[partner.id])) {
-        return true;
-      }
-    }
-
-    // The parents check isn't strictly needed if we are sure that the tree covers all members from the root,
-    // but added for completeness.
-    for (let parentId of tree.relationships.parents) {
-      if (this.memberExistsInTree(memberId, this.families[parentId])) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  // Check if a member with the given ID exists.
-  doesMemberExist(memberId) {
-    for (let familyRootId in this.families) {
-      if (this.memberExistsInTree(memberId, this.families[familyRootId])) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  getFamilyTreeForMember(memberId) {
-    for (let familyRootId in this.families) {
-      if (this.memberExistsInTree(memberId, this.families[familyRootId])) {
-        return this.families[familyRootId];
-      }
-    }
-    return null;
-  }
-
-  findMemberByEmail(email, tree) {
-    if (tree.user && tree.user.email === email) {
-      return tree;
-    }
-
-    for (let child of tree.relationships.children) {
-      const foundMember = this.findMemberByEmail(email, child);
-      if (foundMember) return foundMember;
-    }
-
-    for (let partner of tree.relationships.partner) {
-      const foundMember = this.findMemberByEmail(
-        email,
-        this.families[partner.id],
-      );
-      if (foundMember) return foundMember;
-    }
-
-    return null;
-  }
-}
 
 class UserManager {
   constructor() {
@@ -232,7 +148,6 @@ io.on('connection', socket => {
   socket.on('shareFamilyData', data => {
     const targetUser = userManager.getUserByEmail(data.to);
     if (targetUser.socketConnection) {
-      console.log(data);
       socket
         .to(targetUser.socketConnection)
         .emit('receiveFamilyData', data.familyData);
@@ -246,6 +161,22 @@ io.on('connection', socket => {
     // Forward the family data to the client specified by the 'to' property in the received data
   });
 
+  /*
+  A listener which informs members of a family to modifications to their family
+  */
+  socket.on('familyUpdate', data => {
+    if (!data || !Array.isArray(data.to)) return;
+    console.log(data.to);
+    data.to.forEach(user => {
+      console.log(user);
+      const targetUser = userManager.getUserByEmail(user.user);
+      console.log(targetUser);
+      if (targetUser && targetUser.socketConnection) {
+        console.log('sending to', targetUser);
+        io.to(targetUser.socketConnection).emit('familyUpdate', data);
+      }
+    });
+  });
   // Handle errors.
   socket.on('error', errorMessage => {
     userManager.handleError(socket, errorMessage);

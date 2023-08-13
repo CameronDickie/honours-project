@@ -15,6 +15,7 @@ import {
   extractAttributesFromTree,
   createFamilyMember,
   addMemberToTree,
+  getIndividuals,
 } from '../components/FamilyDataContext';
 import {stringify, parse} from 'flatted';
 
@@ -24,7 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const NewMemberView: React.FC = () => {
   const {toMergeData, familyData, setFamilyData, setToMergeData} =
     useFamilyData();
-  const {setIsFamilyAssociated} = useSocket();
+  const {socket, setIsFamilyAssociated} = useSocket();
 
   const [parentModalVisible, setParentModalVisible] = useState(false);
   const [childModalVisible, setChildModalVisible] = useState(false);
@@ -101,6 +102,14 @@ const NewMemberView: React.FC = () => {
       return;
     }
 
+    if (!socket) {
+      Alert.alert(
+        'Error',
+        'Socket connection error. Please restart your application',
+      );
+      return;
+    }
+
     const newMember = createFamilyMember({
       name: name,
       birthdate: birthdate,
@@ -109,10 +118,10 @@ const NewMemberView: React.FC = () => {
       relationships: {
         children: [], // these will be populated in addMemberToTree
         parents: [],
-        partner: [], // Assuming no partner is set during creation. Adjust if otherwise.
+        partner: [],
       },
     });
-
+    //add this new member to the family data structure
     const updatedRoot = addMemberToTree(
       toMergeData.rootMember,
       newMember,
@@ -125,12 +134,22 @@ const NewMemberView: React.FC = () => {
       //then, once familyData has been set, we ensure isFamilyAssociated is true
       setIsFamilyAssociated(true);
       saveFamilyDataToStorage({rootMember: updatedRoot});
+      const targetUsers = getIndividuals(updatedRoot, ['user']);
+
+      const toSend = {
+        rootMember: stringify(updatedRoot),
+        from: newMember.user,
+        to: targetUsers.filter(user => user.user !== newMember.user),
+        type: 'addMember',
+      };
+
+      // //then, we broadcast the update to the rest of the members in the family.
+      socket.emit('familyUpdate', toSend);
       return {rootMember: updatedRoot};
     });
     setToMergeData(() => {
       return {rootMember: null};
     });
-    //then, we broadcast the update to the rest of the members in the family.
   };
 
   const renderChildOfListItem = ({item}: {item: string}) => (
