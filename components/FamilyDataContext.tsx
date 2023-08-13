@@ -46,6 +46,8 @@ interface FamilyDataProviderProps {
 interface FamilyDataContextProps {
   familyData: FamilyData;
   setFamilyData: React.Dispatch<React.SetStateAction<FamilyData>>;
+  toMergeData: FamilyData;
+  setToMergeData: React.Dispatch<React.SetStateAction<FamilyData>>;
 }
 
 //A helper function which creates an object with only the desired attributes for a given FamilyMember
@@ -71,7 +73,7 @@ const extractAttributes = (member: FamilyMember, attributes: string[]): any => {
   It then recursively does the same for all the children and parents of the current member
   @returns a list of JSON objects corresponding to a FamilyMember in the Tree
 */
-const extractAttributesFromTree = (
+export const extractAttributesFromTree = (
   root: FamilyMember | null,
   attributes: string[],
 ): any[] => {
@@ -132,9 +134,12 @@ export const FamilyDataProvider: React.FC<FamilyDataProviderProps> = ({
   children,
 }) => {
   const [familyData, setFamilyData] = useState<FamilyData>(defaultFamilyData);
+  //a state to remember what family we are attempting to join
+  const [toMergeData, setToMergeData] = useState<FamilyData>(defaultFamilyData);
 
   return (
-    <FamilyDataContext.Provider value={{familyData, setFamilyData}}>
+    <FamilyDataContext.Provider
+      value={{familyData, setFamilyData, toMergeData, setToMergeData}}>
       {children}
     </FamilyDataContext.Provider>
   );

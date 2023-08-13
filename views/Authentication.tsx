@@ -18,6 +18,7 @@ import {
   createFamilyMember,
   useFamilyData,
 } from '../components/FamilyDataContext';
+import NewMemberView from './NewMemberView';
 
 const SERVER_URL =
   Platform.OS === 'android'
@@ -34,7 +35,8 @@ export const Authentication: React.FC = () => {
   const [lastName, setLastName] = useState('');
 
   const {socket, setIsFamilyAssociated, onlineUsers} = useSocket(); // Use the socket from the context!
-  const {setFamilyData, familyData} = useFamilyData();
+  const {setFamilyData, familyData, setToMergeData, toMergeData} =
+    useFamilyData();
 
   const [name, setName] = useState<string>('');
   const [birthdate, setBirthdate] = useState<string>('');
@@ -262,7 +264,10 @@ export const Authentication: React.FC = () => {
           />
         </>
       )}
-      {view === 'joinFamily' && (
+      {view === 'joinFamily' && toMergeData.rootMember !== null && (
+        <NewMemberView />
+      )}
+      {view === 'joinFamily' && toMergeData.rootMember === null && (
         <ScrollView>
           <Text style={styles.subtitle}>Online users to join</Text>
           {onlineUsers.map((user, index) => {

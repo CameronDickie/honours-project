@@ -75,7 +75,8 @@ export async function performJoinFamily(
 }
 
 export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
-  const {setFamilyData, familyData} = useFamilyData();
+  const {setFamilyData, familyData, setToMergeData, toMergeData} =
+    useFamilyData();
   const {showNotification} = useNotification();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isFamilyAssociated, setIsFamilyAssociated] = useState(false);
@@ -107,7 +108,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
 
     socketIo?.on('receiveFamilyData', data => {
       console.log('Received family data:', data);
-
+      console.log('myFamilyData', familyData);
       //display the relationship view but for now lets just console.log
 
       // setFamilyData(data);
@@ -194,9 +195,11 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
 
     socketIo.on('receiveFamilyData', data => {
       console.log('Received family data:', data);
-
       //display the relationship view but for now lets just console.log
-
+      //currently in the joinFamily view in the Authentication section
+      setToMergeData(() => {
+        return data;
+      });
       // setFamilyData(data);
     });
 
