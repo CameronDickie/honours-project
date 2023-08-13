@@ -34,6 +34,44 @@ export interface FamilyData {
   // ... any other fields
 }
 
+export const addMemberToTree = (
+  root: FamilyMember | null,
+  newMember: FamilyMember,
+  childOf: string[],
+  parentOf: string[],
+): FamilyMember => {
+  // Base case
+  if (!root) return newMember;
+
+  // Base case to prevent infinite recursion
+  if (childOf.length === 0 && parentOf.length === 0) return root;
+
+  // Check if the current root's name is in the childOf or parentOf arrays
+  const isChildOfRoot = childOf.indexOf(root.name);
+  if (isChildOfRoot !== -1) {
+    root.relationships.children.push(newMember);
+    newMember.relationships.parents.push(root);
+    childOf.splice(isChildOfRoot, 1); // Remove the processed item
+  }
+
+  const isParentOfRoot = parentOf.indexOf(root.name);
+  if (isParentOfRoot !== -1) {
+    root.relationships.parents.push(newMember);
+    newMember.relationships.children.push(root);
+    parentOf.splice(isParentOfRoot, 1); // Remove the processed item
+  }
+
+  // Recursively check for children and parents
+  root.relationships.children.forEach(child =>
+    addMemberToTree(child, newMember, childOf, parentOf),
+  );
+  root.relationships.parents.forEach(parent =>
+    addMemberToTree(parent, newMember, childOf, parentOf),
+  );
+
+  return root;
+};
+
 const defaultFamilyData: FamilyData = {
   rootMember: null,
   // ... any other default values
