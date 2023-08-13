@@ -118,13 +118,7 @@ const NewMemberView: React.FC = () => {
       selectedChildOfItems,
       selectedParentOfItems,
     );
-    console.log(updatedRoot);
-    console.log(updatedRoot.relationships.parents[0]);
-    console.log(updatedRoot.relationships.parents[0].relationships.children[0]);
-    console.log(
-      updatedRoot ===
-        updatedRoot.relationships.parents[0].relationships.children[0],
-    );
+
     //once we confirm that updatedRoot is in the correct format, set this familyData to updatedRoot
     setFamilyData(() => {
       //then, once familyData has been set, we ensure isFamilyAssociated is true
