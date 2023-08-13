@@ -1,25 +1,12 @@
 import React, {useState} from 'react';
-import {
-  ScrollView,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  TextInput,
-  Switch,
-  Platform,
-  ActionSheetIOS,
-  Alert,
-} from 'react-native';
-import {Picker} from '@react-native-picker/picker';
+import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import Tree from '../components/Tree';
 import {
   FamilyMember,
   useFamilyData,
   getIndividuals,
 } from '../components/FamilyDataContext';
-import {performJoinFamily} from '../components/SocketContext';
+import NewMemberView from './NewMemberView';
 
 interface FamilyViewProps {
   screenHeight: number;
@@ -30,303 +17,47 @@ export const FamilyView: React.FC<FamilyViewProps> = ({
   screenHeight,
   screenWidth,
 }) => {
-  const [modalVisible, setModalVisible] = useState(false);
-  const [memberName, setMemberName] = useState<string>('');
-  const [memberBirthdate, setMemberBirthdate] = useState<string>('');
-  const [memberDeathdate, setMemberDeathdate] = useState<string>('');
-  const [memberEmail, setMemberEmail] = useState<string>('');
-  const [memberPassword, setMemberPassword] = useState<string>('');
-  const [isUser, setIsUser] = useState<boolean>(false); // Toggle this to show/hide user fields
+  const {familyData, setFamilyData} = useFamilyData();
 
-  const {familyData, setFamilyData} = useFamilyData(); // Access family data from context
-
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [selectedUser2, setSelectedUser2] = useState<string | null>(null);
-
-  const [arrowModalVisible, setArrowModalVisible] = useState(false);
-  const [displayId, setDisplayId] = useState(false);
-  const [joinFamilyId, setJoinFamilyId] = useState<string>('');
-
-  const allUsers: string[] = []; // This will store all the user names for the dropdown
-
-  // This function populates the allUsers array with user names
-  const populateUserNames = (member: FamilyMember | null) => {
-    if (!member) return;
-
-    if (member.user) {
-      allUsers.push(member.name);
-    }
-
-    member.relationships.children.forEach(child => {
-      populateUserNames(child);
-    });
-    member.relationships.parents.forEach(parent => {
-      populateUserNames(parent);
-    });
-  };
-
-  populateUserNames(familyData.rootMember);
-
-  const addFamilyMember = () => {
-    // Here you would usually interact with your backend or other logic to actually add the member to your data structure
-    // For the sake of this example, I'll just show a mock structure to add it to your local state
-
-    const newMember: FamilyMember = {
-      id: Math.random().toString(), // In a real scenario, ID generation should be more sophisticated
-      name: memberName,
-      birthdate: memberBirthdate,
-      deathdate: memberDeathdate || null,
-      user: isUser ? memberEmail : null,
-      relationships: {
-        partner: [],
-        children: [],
-        parents: [],
-      },
-    };
-
-    // For this mock example, I'll just replace the root member
-    setFamilyData({
-      rootMember: newMember,
-    });
-
-    handleModalClose();
-  };
+  const [creatingFamilyMember, setCreatingFamilyMember] =
+    useState<boolean>(false);
 
   const handlePlusPress = () => {
-    setModalVisible(true); // Show the modal
+    setCreatingFamilyMember(true);
   };
 
-  const handleModalClose = () => {
-    setModalVisible(false); // Hide the modal
-  };
-
-  const handleArrowPress = () => {
-    setArrowModalVisible(true);
-  };
-  const handleJoinFamily = () => {
-    //TODO: this needs to be refactored as this is not how i want to go about this
-
-    // First, present the user with a warning
-    Alert.alert(
-      'Join Another Family',
-      'You will need to be re-invited to your current family if you join another.',
-      [
-        {
-          text: 'Cancel',
-          onPress: () => console.log('Joining family cancelled.'),
-          style: 'cancel',
-        },
-        {
-          text: 'Accept',
-          onPress: () => {
-            // The logic for joining a family after the user accepts the warning
-            console.log(`Joining family with ID: ${joinFamilyId}`);
-            if (familyData.rootMember !== null) {
-              performJoinFamily(joinFamilyId, familyData.rootMember);
-            } else {
-              console.log('no family data in storage');
-            }
-          },
-        },
-      ],
-      {cancelable: true},
-    );
-  };
-
-  const showActionSheet = (setSelected: (value: string) => void) => {
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options: ['Cancel', ...allUsers],
-        cancelButtonIndex: 0,
-      },
-      buttonIndex => {
-        if (buttonIndex !== 0) {
-          setSelected(allUsers[buttonIndex - 1]);
-        }
-      },
-    );
+  const handleCancelPress = () => {
+    setCreatingFamilyMember(false);
   };
 
   return (
     <View style={{flex: 1}}>
-      <Tree screenHeight={screenHeight} screenWidth={screenWidth} />
-
-      {/* Buttons Container */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={handlePlusPress}
-          activeOpacity={0.6}>
-          <Text style={styles.iconText}>+</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={handleArrowPress}
-          activeOpacity={0.6}>
-          <Text style={styles.iconText}>-</Text>
-        </TouchableOpacity>
-        {/* Other button... */}
-      </View>
-
-      {/* Modal for adding a family member */}
-      <Modal animationType="slide" transparent={true} visible={modalVisible}>
-        {/* <TouchableOpacity
-          style={styles.modalContainer}
-          activeOpacity={1} // Keep it fully opaque when pressed
-          onPress={handleModalClose} // Close the modal when this is pressed
-        > */}
-        <ScrollView
-          contentContainerStyle={styles.modalView}
-          onStartShouldSetResponder={() => true}>
-          <View style={{width: '100%'}}>
-            <Text style={[styles.modalTitle, styles.centeredText]}>
-              Add a Family Member
-            </Text>
-            <TextInput
-              placeholder="Name"
-              value={memberName}
-              onChangeText={setMemberName}
-              style={styles.input}
-            />
-            <TextInput
-              placeholder="Birthdate (e.g., YYYY-MM-DD)"
-              value={memberBirthdate}
-              onChangeText={setMemberBirthdate}
-              style={styles.input}
-            />
-            <TextInput
-              placeholder="Deathdate (e.g., YYYY-MM-DD)"
-              value={memberDeathdate}
-              onChangeText={setMemberDeathdate}
-              style={styles.input}
-            />
-
-            {Platform.OS === 'ios' ? (
-              <TouchableOpacity
-                onPress={() => showActionSheet(setSelectedUser)}>
-                <Text style={styles.input}>
-                  {selectedUser || 'Select User...'}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <Picker
-                selectedValue={selectedUser}
-                style={styles.pickerStyle}
-                onValueChange={itemValue =>
-                  setSelectedUser(itemValue as string)
-                }>
-                <Picker.Item label="Select User..." value={null} />
-                {allUsers.map((user, index) => (
-                  <Picker.Item key={index} label={user} value={user} />
-                ))}
-              </Picker>
-            )}
-
-            {Platform.OS === 'ios' ? (
-              <TouchableOpacity
-                onPress={() => showActionSheet(setSelectedUser2)}>
-                <Text style={styles.input}>
-                  {selectedUser2 || 'Select User...'}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <Picker
-                selectedValue={selectedUser2}
-                style={styles.pickerStyle}
-                onValueChange={itemValue =>
-                  setSelectedUser2(itemValue as string)
-                }>
-                <Picker.Item label="Select User..." value={null} />
-                {allUsers.map((user, index) => (
-                  <Picker.Item key={index} label={user} value={user} />
-                ))}
-              </Picker>
-            )}
-            <View style={styles.inlineContainer}>
-              <Switch
-                value={isUser}
-                onValueChange={setIsUser}
-                style={styles.switch}
-              />
-              <Text style={styles.subtitle}>Create a new User</Text>
-            </View>
-
-            {isUser && (
-              <>
-                <TextInput
-                  placeholder="Email"
-                  value={memberEmail}
-                  onChangeText={setMemberEmail}
-                  style={styles.input}
-                />
-                <TextInput
-                  placeholder="Password"
-                  value={memberPassword}
-                  onChangeText={setMemberPassword}
-                  secureTextEntry={true}
-                  style={styles.input}
-                />
-              </>
-            )}
+      {creatingFamilyMember ? (
+        <>
+          <NewMemberView />
+          <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={addFamilyMember}>
-              <Text style={styles.buttonText}>Add Member</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={handleModalClose}>
-              <Text style={styles.buttonText}>Close</Text>
+              style={styles.iconButton}
+              onPress={handleCancelPress}
+              activeOpacity={0.6}>
+              <Text style={styles.iconText}>x</Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
-        {/* </TouchableOpacity> */}
-      </Modal>
-
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={arrowModalVisible}>
-        <ScrollView contentContainerStyle={styles.modalView}>
-          <Text style={[styles.modalTitle, styles.centeredText]}>
-            Join a Family
-          </Text>
-
-          <View style={styles.inlineContainer}>
-            <Switch
-              value={displayId}
-              onValueChange={setDisplayId}
-              style={styles.switch}
-            />
-            <Text style={styles.subtitle}>Display Family ID</Text>
+        </>
+      ) : (
+        <>
+          <Tree screenHeight={screenHeight} screenWidth={screenWidth} />
+          {/* Buttons Container */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={handlePlusPress}
+              activeOpacity={0.6}>
+              <Text style={styles.iconText}>+</Text>
+            </TouchableOpacity>
           </View>
-
-          {displayId && (
-            <Text style={[styles.centeredText, {marginBottom: 20}]}>
-              {familyData.rootMember?.id}
-            </Text>
-          )}
-
-          <TextInput
-            placeholder="Enter Family ID to join"
-            value={joinFamilyId}
-            onChangeText={setJoinFamilyId}
-            style={styles.input}
-          />
-
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={handleJoinFamily}>
-            <Text style={styles.buttonText}>Join Family</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => setArrowModalVisible(false)}>
-            <Text style={styles.buttonText}>Close</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </Modal>
+        </>
+      )}
     </View>
   );
 };

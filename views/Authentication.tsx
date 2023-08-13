@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import {Picker} from '@react-native-picker/picker';
+import {stringify, parse} from 'flatted';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useSocket} from '../components/SocketContext';
 import {
@@ -42,9 +43,10 @@ export const Authentication: React.FC = () => {
   const [birthdate, setBirthdate] = useState<string>('');
   const [deathdate, setDeathdate] = useState<string | undefined>('');
 
+  //this stringify(flatted) is terribly inefficient, but is needed to break the cyclical nature of the json object
   const saveFamilyDataToStorage = async (data: typeof familyData) => {
     try {
-      await AsyncStorage.setItem('familyData', JSON.stringify(data));
+      await AsyncStorage.setItem('familyData', stringify(data));
     } catch (error) {
       console.error("Couldn't save family data to storage:", error);
     }
@@ -56,7 +58,7 @@ export const Authentication: React.FC = () => {
       if (data !== null) {
         setFamilyData(() => {
           //discard old data
-          const newData = JSON.parse(data);
+          const newData = parse(data || '{}');
           setIsFamilyAssociated(true);
           return newData;
         });

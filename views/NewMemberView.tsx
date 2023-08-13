@@ -16,6 +16,8 @@ import {
   createFamilyMember,
   addMemberToTree,
 } from '../components/FamilyDataContext';
+import {stringify, parse} from 'flatted';
+
 import {useSocket} from '../components/SocketContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -47,9 +49,10 @@ const NewMemberView: React.FC = () => {
     setDeathdate(familyData.rootMember?.deathdate || '');
   }, [familyData]);
 
+  //this stringify(flatted) is terribly inefficient, but is needed to break the cyclical nature of the json object
   const saveFamilyDataToStorage = async (data: typeof familyData) => {
     try {
-      await AsyncStorage.setItem('familyData', JSON.stringify(data));
+      await AsyncStorage.setItem('familyData', stringify(data));
     } catch (error) {
       console.error("Couldn't save family data to storage:", error);
     }
@@ -81,8 +84,6 @@ const NewMemberView: React.FC = () => {
 
   const performJoinFamily = () => {
     // For now, we're just logging the lists. You can process them as needed.
-    console.log('Child of:', selectedChildOfItems);
-    console.log('Parent of:', selectedParentOfItems);
 
     if (
       selectedChildOfItems.length === 0 &&

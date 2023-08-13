@@ -1,8 +1,7 @@
 import React, {useMemo} from 'react';
-
 import {Group, Canvas, Path, Skia, Circle} from '@shopify/react-native-skia';
-import {useFamilyData, FamilyMember} from './FamilyDataContext'; // Assuming it's in the same directory
-// import Node from './Node';
+import {useFamilyData, FamilyMember} from './FamilyDataContext';
+
 interface TreeProps {
   screenWidth: number;
   screenHeight: number;
@@ -20,32 +19,41 @@ function positionNodes(
   root: Node,
   widthSpacing: number,
   heightSpacing: number,
+  screenHeight: number,
 ) {
   // Assign y coordinates and center nodes based on their hierarchy
   const dfs = (node: Node, x: number, depth: number) => {
     node.position[0] = x;
 
-    // If depth is 0 (root node), don't overwrite its y position
-    if (depth !== 0) {
-      node.position[1] = depth * heightSpacing;
+    if (depth === 0) {
+      // root node
+      node.position[1] = screenHeight / 2;
+    } else if (depth > 0) {
+      // children
+      node.position[1] = screenHeight / 2 + depth * heightSpacing;
+    } else {
+      // parents (negative depth)
+      node.position[1] = screenHeight / 2 + depth * heightSpacing;
     }
 
-    const childrenCount = node.children.length;
-
-    if (childrenCount > 0) {
-      const totalWidthForChildren = widthSpacing * (childrenCount - 1);
-      let currentX = x - totalWidthForChildren / 2;
-      for (const child of node.children) {
-        dfs(child, currentX, depth + 1);
-        currentX += widthSpacing;
-      }
+    let currentX = x;
+    for (const child of node.children) {
+      dfs(child, currentX, depth + 1);
+      currentX += widthSpacing;
     }
   };
 
   dfs(root, root.position[0], 0);
 }
 
-const renderNodes = (node: Node) => {
+const renderNodes = (node: Node, visited: Set<string>) => {
+  // If the node has already been visited, return immediately
+  if (visited.has(node.id)) {
+    return null;
+  }
+  // Mark the current node as visited
+  visited.add(node.id);
+
   return (
     <React.Fragment>
       <Circle cx={node.position[0]} cy={node.position[1]} r={node.radius} />
@@ -56,7 +64,8 @@ const renderNodes = (node: Node) => {
         return (
           <React.Fragment key={keyIndex}>
             <Path path={path} color="black" style="stroke" strokeWidth={5} />
-            {renderNodes(child)}
+            {renderNodes(child, visited)}
+            {/* Pass the visited set down the recursive call */}
           </React.Fragment>
         );
       })}
@@ -64,39 +73,57 @@ const renderNodes = (node: Node) => {
   );
 };
 
-const Tree = (props: TreeProps) => {
+const Tree = ({screenWidth, screenHeight}: TreeProps) => {
   const {familyData} = useFamilyData();
-  const rootFamilyMember = familyData.rootMember;
 
-  // Convert FamilyMember to Node structure.
-  const familyToNodeTree = (familyMember: FamilyMember | null): Node | null => {
+  const familyToNodeTree = (
+    familyMember: FamilyMember | null,
+    visited: Set<string> = new Set(),
+  ): Node | null => {
     if (!familyMember) return null;
+
+    // If the member has already been visited, return null
+    if (visited.has(familyMember.id)) {
+      return null;
+    }
+
+    // Mark the current member as visited
+    visited.add(familyMember.id);
+
+    // Get all direct relations (children and parents)
+    const relations = [
+      ...familyMember.relationships.children,
+      ...familyMember.relationships.parents,
+    ];
+
     return {
       id: familyMember.id,
       position: [-1, -1],
-      radius: props.screenWidth * 0.08,
+      radius: screenWidth * 0.08,
       src: '', // Assuming you don't have this information in FamilyMember
-      children: familyMember.relationships.children
-        .map(child => familyToNodeTree(child))
+      children: relations
+        .map(member => familyToNodeTree(member, visited)) // Pass the visited set down the recursive call
         .filter(Boolean) as Node[], // filter out null children
     };
   };
+
   const rootNode = useMemo(() => {
-    const yPadding = 50;
-    const initialNode = familyToNodeTree(rootFamilyMember);
+    const initialNode = familyToNodeTree(
+      familyData.rootMember,
+      new Set<string>(),
+    );
     if (initialNode) {
-      initialNode.position = [props.screenWidth / 2, yPadding]; // Adjust Y value as needed
+      initialNode.position = [screenWidth / 2, 50]; // Start from the center-top
     }
     return initialNode;
-  }, [rootFamilyMember]);
+  }, [familyData.rootMember, screenWidth]);
 
-  if (!rootNode) return null; // Early exit if rootNode is null
+  if (!rootNode) return null;
 
-  positionNodes(rootNode, 100, 100);
-
+  positionNodes(rootNode, 100, 100, screenHeight);
   return (
     <Canvas style={{flex: 1}}>
-      <Group blendMode="src">{renderNodes(rootNode)}</Group>
+      <Group blendMode="src">{renderNodes(rootNode, new Set<string>())}</Group>
     </Canvas>
   );
 };

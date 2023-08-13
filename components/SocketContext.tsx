@@ -44,36 +44,6 @@ export const useSocket = () => {
   return context;
 };
 
-export async function performJoinFamily(
-  joinFamilyId: string,
-  rootMember: FamilyMember,
-) {
-  try {
-    const response = await fetch(SERVER_URL + '/joinFamily', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        familyId: joinFamilyId,
-        familyData: rootMember,
-      }),
-    });
-
-    const result = await response.json();
-    if (response.ok) {
-      // Handle successful join
-      console.log('Successfully joined the family!', result);
-    } else {
-      // Handle error from the server
-      console.error('Error joining the family:', result.error);
-    }
-  } catch (error: any) {
-    // Handle network error
-    console.error('Network error:', error.message);
-  }
-}
-
 export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
   const {setFamilyData, familyData, setToMergeData, toMergeData} =
     useFamilyData();
