@@ -25,7 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const NewMemberView: React.FC = () => {
   const {toMergeData, familyData, setFamilyData, setToMergeData} =
     useFamilyData();
-  const {socket, setIsFamilyAssociated} = useSocket();
+  const {socket, setIsFamilyAssociated, isFamilyAssociated} = useSocket();
 
   const [parentModalVisible, setParentModalVisible] = useState(false);
   const [childModalVisible, setChildModalVisible] = useState(false);
@@ -58,10 +58,17 @@ const NewMemberView: React.FC = () => {
       console.error("Couldn't save family data to storage:", error);
     }
   };
-
-  const memberNames = extractAttributesFromTree(toMergeData.rootMember, [
-    'name',
-  ]).map(member => member.name);
+  let memberNames;
+  //if we are on the FamilyView, then refer to familyData. Otherwise, if we are still in authentication, refer to the data that will be merged.
+  if (isFamilyAssociated) {
+    memberNames = extractAttributesFromTree(familyData.rootMember, [
+      'name',
+    ]).map(member => member.name);
+  } else {
+    memberNames = extractAttributesFromTree(toMergeData.rootMember, [
+      'name',
+    ]).map(member => member.name);
+  }
 
   const toggleChildOfSelection = (name: string) => {
     setSelectedChildOfItems(prev => {
@@ -82,7 +89,68 @@ const NewMemberView: React.FC = () => {
       }
     });
   };
+  const performAddMember = () => {
+    // Logic for adding a member when "Add Member" is pressed
+    if (
+      selectedChildOfItems.length === 0 &&
+      selectedParentOfItems.length === 0
+    ) {
+      Alert.alert(
+        'Error',
+        'You need to be related to at least one member to join.',
+      );
+      return;
+    }
 
+    if (!name) {
+      Alert.alert('Error', 'You must have a name to join.');
+      return;
+    }
+    if (!socket) {
+      Alert.alert(
+        'Error',
+        'Socket connection error. Please restart your application',
+      );
+      return;
+    }
+    const newMember = createFamilyMember({
+      name: name,
+      birthdate: birthdate,
+      deathdate: deathdate || null,
+      user: null,
+      relationships: {
+        children: [], // these will be populated in addMemberToTree
+        parents: [],
+        partner: [],
+      },
+    });
+
+    //add this new member to the family data structure
+    const updatedRoot = addMemberToTree(
+      familyData.rootMember,
+      newMember,
+      selectedChildOfItems,
+      selectedParentOfItems,
+    );
+    //once we confirm that updatedRoot is in the correct format, set this familyData to updatedRoot
+    setFamilyData(() => {
+      //then, once familyData has been set, we ensure isFamilyAssociated is true
+      setIsFamilyAssociated(true);
+      saveFamilyDataToStorage({rootMember: updatedRoot});
+      const targetUsers = getIndividuals(updatedRoot, ['user']);
+
+      const toSend = {
+        rootMember: stringify(updatedRoot),
+        from: newMember.user,
+        to: targetUsers.filter(user => user.user !== newMember.user),
+        type: 'addMember',
+      };
+
+      // //then, we broadcast the update to the rest of the members in the family.
+      socket.emit('familyUpdate', toSend);
+      return {rootMember: updatedRoot};
+    });
+  };
   const performJoinFamily = () => {
     // For now, we're just logging the lists. You can process them as needed.
 
@@ -246,10 +314,16 @@ const NewMemberView: React.FC = () => {
         </View>
       </Modal>
 
-      {/* Join Family Button */}
-      <TouchableOpacity onPress={performJoinFamily} style={styles.joinButton}>
-        <Text style={styles.joinButtonText}>Join Family</Text>
-      </TouchableOpacity>
+      {/* Conditionally rendering the TouchableOpacity based on isFamilyAssociated */}
+      {isFamilyAssociated ? (
+        <TouchableOpacity onPress={performAddMember} style={styles.joinButton}>
+          <Text style={styles.joinButtonText}>Add Member</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity onPress={performJoinFamily} style={styles.joinButton}>
+          <Text style={styles.joinButtonText}>Join Family</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
