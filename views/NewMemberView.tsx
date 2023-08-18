@@ -121,7 +121,6 @@ const NewMemberView: React.FC = () => {
       relationships: {
         children: [], // these will be populated in addMemberToTree
         parents: [],
-        partner: [],
       },
     });
 
@@ -186,7 +185,6 @@ const NewMemberView: React.FC = () => {
       relationships: {
         children: [], // these will be populated in addMemberToTree
         parents: [],
-        partner: [],
       },
     });
     //add this new member to the family data structure

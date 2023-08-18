@@ -75,7 +75,6 @@ const renderNodes = (node: Node, visited: Set<string>) => {
 
 const Tree = ({screenWidth, screenHeight}: TreeProps) => {
   const {familyData} = useFamilyData();
-
   const familyToNodeTree = (
     familyMember: FamilyMember | null,
     visited: Set<string> = new Set(),

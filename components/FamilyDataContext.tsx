@@ -23,7 +23,6 @@ export interface FamilyMember {
   deathdate: string | null | undefined;
   user: string | null; // If the member is also a user, populate this field with their email. Otherwise, it'll be null.
   relationships: {
-    partner: Relationship[];
     children: FamilyMember[];
     parents: FamilyMember[];
   };
@@ -151,7 +150,6 @@ export const createFamilyMember = (
     deathdate: memberData.deathdate || null,
     user: memberData.user || null,
     relationships: memberData.relationships || {
-      partner: [],
       children: [],
       parents: [],
     },

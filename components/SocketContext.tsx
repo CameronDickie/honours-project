@@ -25,11 +25,6 @@ interface SocketProviderProps {
   children: React.ReactNode;
 }
 
-interface MemberStatus {
-  isAssociated: boolean;
-  receivedMemId: number;
-}
-
 const SocketContext = createContext<SocketContextProps | undefined>(undefined);
 
 export const useSocket = () => {
@@ -96,36 +91,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
     const socketIo = io(SERVER_URL);
     setSocket(socketIo);
 
-    //remnant of previous implementation, however leaving it in in case it is needed in the future
-    socketIo.on('connect', () => {});
-
-    // Listen to the 'memberStatus' event and set 'isFamilyAssociated'
-    socketIo.on('memberStatus', (status: MemberStatus) => {
-      const {isAssociated, receivedMemId} = status;
-
-      //request the data for the family, if the family is associated
-      if (isAssociated) {
-        socketIo.emit('initialDataRequest', receivedMemId);
-      } else {
-        //ensure that the user has the signup view
-        setIsFamilyAssociated(false);
-      }
-    });
-
-    //i think this is no longer used???
-    //this is their first recieving of the data, which should be organized properly and the root member properly assigned
-    socketIo.on('initialData', (data: FamilyMember) => {
-      if (!data) return;
-      setFamilyData(prevData => ({...prevData, rootMember: data}));
-      //ensure that the user has the familyView
-      setIsFamilyAssociated(true);
-    });
-
-    //i don't think that this is being used either but im not sure about this one
-    socketIo.on('joinResponse', (data: any) => {
-      console.log('Received joinResponse:', data);
-      // Handle the response as required
-    });
     // Handle user status changes
     socketIo.on(
       'userStatusChange',
@@ -155,7 +120,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({children}) => {
         message: `User ${data.from} wants to join your family! If you hit accept, you will allow them to view your family tree.`,
         approve: () => {
           console.log('Approved', familyData);
-          // Handle approve logic...
 
           // Get the current family data from the FamilyDataContext
           // Emit the family data to the signaling server with the id of the requesting client

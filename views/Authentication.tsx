@@ -86,7 +86,6 @@ export const Authentication: React.FC = () => {
       deathdate,
       user: email, // Using 'email' to populate the 'user' field
       relationships: {
-        partner: [],
         children: [],
         parents: [],
       },
@@ -138,7 +137,6 @@ export const Authentication: React.FC = () => {
       deathdate: undefined,
       user: email, // Using 'email' to populate the 'user' field
       relationships: {
-        partner: [],
         children: [],
         parents: [],
       },
